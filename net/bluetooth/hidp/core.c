@@ -852,12 +852,6 @@ int hidp_add_connection(struct hidp_connadd_req *req, struct socket *ctrl_sock, 
 		goto failed;
 	}
 
-	session->conn = hidp_get_connection(session);
-	if (!session->conn) {
-		err = -ENOTCONN;
-		goto failed;
-	}
-
 	bacpy(&session->bdaddr, &bt_sk(ctrl_sock->sk)->dst);
 
 	session->ctrl_mtu = min_t(uint, l2cap_pi(ctrl_sock->sk)->omtu, l2cap_pi(ctrl_sock->sk)->imtu);
