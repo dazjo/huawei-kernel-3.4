@@ -114,16 +114,16 @@ void dhd_customer_gpio_wlan_ctrl(int onoff);
 uint dhd_dev_reset(struct net_device *dev, uint8 flag);
 void dhd_dev_init_ioctl(struct net_device *dev);
 #ifdef CONFIG_CFG80211
-int CONFIG_CFG80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr);
-int CONFIG_CFG80211_set_btcoex_dhcp(struct net_device *dev, char *command);
+int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr);
+int wl_cfg80211_set_btcoex_dhcp(struct net_device *dev, char *command);
 #else
-int CONFIG_CFG80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr)
+int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr)
 { return 0; }
-int CONFIG_CFG80211_set_p2p_noa(struct net_device *net, char* buf, int len)
+int wl_cfg80211_set_p2p_noa(struct net_device *net, char* buf, int len)
 { return 0; }
-int CONFIG_CFG80211_get_p2p_noa(struct net_device *net, char* buf, int len)
+int wl_cfg80211_get_p2p_noa(struct net_device *net, char* buf, int len)
 { return 0; }
-int CONFIG_CFG80211_set_p2p_ps(struct net_device *net, char* buf, int len)
+int wl_cfg80211_set_p2p_ps(struct net_device *net, char* buf, int len)
 { return 0; }
 #endif
 extern int dhd_os_check_if_up(void *dhdp);
@@ -398,7 +398,7 @@ static int wl_android_get_p2p_dev_addr(struct net_device *ndev, char *command, i
 	int ret;
 	int bytes_written = 0;
 
-	ret = CONFIG_CFG80211_get_p2p_dev_addr(ndev, (struct ether_addr*)command);
+	ret = wl_cfg80211_get_p2p_dev_addr(ndev, (struct ether_addr*)command);
 	if (ret)
 		return 0;
 	bytes_written = sizeof(struct ether_addr);
@@ -565,7 +565,7 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		else
 			net_os_set_packet_filter(net, 1); /* DHCP ends */
 #ifdef CONFIG_CFG80211
-		bytes_written = CONFIG_CFG80211_set_btcoex_dhcp(net, command);
+		bytes_written = wl_cfg80211_set_btcoex_dhcp(net, command);
 #endif
 	}
 	else if (strnicmp(command, CMD_SETSUSPENDOPT, strlen(CMD_SETSUSPENDOPT)) == 0) {
@@ -601,22 +601,22 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	}
 	else if (strnicmp(command, CMD_P2P_SET_NOA, strlen(CMD_P2P_SET_NOA)) == 0) {
 		int skip = strlen(CMD_P2P_SET_NOA) + 1;
-		bytes_written = CONFIG_CFG80211_set_p2p_noa(net, command + skip,
+		bytes_written = wl_cfg80211_set_p2p_noa(net, command + skip,
 			priv_cmd.total_len - skip);
 	}
 	else if (strnicmp(command, CMD_P2P_GET_NOA, strlen(CMD_P2P_GET_NOA)) == 0) {
-		bytes_written = CONFIG_CFG80211_get_p2p_noa(net, command, priv_cmd.total_len);
+		bytes_written = wl_cfg80211_get_p2p_noa(net, command, priv_cmd.total_len);
 	}
 	else if (strnicmp(command, CMD_P2P_SET_PS, strlen(CMD_P2P_SET_PS)) == 0) {
 		int skip = strlen(CMD_P2P_SET_PS) + 1;
-		bytes_written = CONFIG_CFG80211_set_p2p_ps(net, command + skip,
+		bytes_written = wl_cfg80211_set_p2p_ps(net, command + skip,
 			priv_cmd.total_len - skip);
 	}
 #ifdef CONFIG_CFG80211
 	else if (strnicmp(command, CMD_SET_AP_WPS_P2P_IE,
 		strlen(CMD_SET_AP_WPS_P2P_IE)) == 0) {
 		int skip = strlen(CMD_SET_AP_WPS_P2P_IE) + 3;
-		bytes_written = CONFIG_CFG80211_set_wps_p2p_ie(net, command + skip,
+		bytes_written = wl_cfg80211_set_wps_p2p_ie(net, command + skip,
 			priv_cmd.total_len - skip, *(command + skip - 2) - '0');
 	}
 #endif /* CONFIG_CFG80211 */

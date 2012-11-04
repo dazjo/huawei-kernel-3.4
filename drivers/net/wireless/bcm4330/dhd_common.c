@@ -1041,12 +1041,12 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 #endif /* PROP_TXSTATUS */
 
 #ifdef CONFIG_CFG80211
-			if (CONFIG_CFG80211_is_progress_ifchange()) {
+			if (wl_cfg80211_is_progress_ifchange()) {
 				DHD_ERROR(("%s:  ifidx %d for %s action %d\n",
 					__FUNCTION__, ifevent->ifidx,
 					event->ifname, ifevent->action));
 				if (ifevent->action == WLC_E_IF_ADD)
-					CONFIG_CFG80211_notify_ifchange();
+					wl_cfg80211_notify_ifchange();
 				return (BCME_OK);
 			}
 #endif /* CONFIG_CFG80211 */
@@ -1820,7 +1820,7 @@ exit:
 /* Check if HostAPD or WFD mode setup */
 bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd)
 {
-#ifdef  CONFIG_CFG80211
+#ifdef CONFIG_CFG80211
 	if (((dhd->op_mode & HOSTAPD_MASK) == HOSTAPD_MASK) ||
 		((dhd->op_mode & WFD_MASK) == WFD_MASK))
 		return TRUE;
