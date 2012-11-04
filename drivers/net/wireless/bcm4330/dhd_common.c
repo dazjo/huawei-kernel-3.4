@@ -41,7 +41,7 @@
 #include <dhd_dbg.h>
 #include <msgtrace.h>
 
-#ifdef CONFIG_CFG80211
+#ifdef WL_CFG80211
 #include <wl_cfg80211.h>
 #endif
 #include <proto/bt_amp_hci.h>
@@ -1040,7 +1040,7 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 			}
 #endif /* PROP_TXSTATUS */
 
-#ifdef CONFIG_CFG80211
+#ifdef WL_CFG80211
 			if (wl_cfg80211_is_progress_ifchange()) {
 				DHD_ERROR(("%s:  ifidx %d for %s action %d\n",
 					__FUNCTION__, ifevent->ifidx,
@@ -1049,7 +1049,7 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 					wl_cfg80211_notify_ifchange();
 				return (BCME_OK);
 			}
-#endif /* CONFIG_CFG80211 */
+#endif /* WL_CFG80211 */
 				if (ifevent->ifidx > 0 && ifevent->ifidx < DHD_MAX_IFS) {
 					if (ifevent->action == WLC_E_IF_ADD) {
 						if (dhd_add_if(dhd_pub->info, ifevent->ifidx,
@@ -1820,12 +1820,12 @@ exit:
 /* Check if HostAPD or WFD mode setup */
 bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd)
 {
-#ifdef CONFIG_CFG80211
+#ifdef  WL_CFG80211
 	if (((dhd->op_mode & HOSTAPD_MASK) == HOSTAPD_MASK) ||
 		((dhd->op_mode & WFD_MASK) == WFD_MASK))
 		return TRUE;
 	else
-#endif /* CONFIG_CFG80211 */
+#endif /* WL_CFG80211 */
 		return FALSE;
 }
 

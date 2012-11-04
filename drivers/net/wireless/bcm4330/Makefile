@@ -27,7 +27,6 @@ DFLAGS += -DEMBEDDED_PLATFORM -DARP_OFFLOAD_SUPPORT -DPKT_FILTER_SUPPORT
 DFLAGS += -DBCMLXSDMMC -DBCMPLATFORM_BUS 
 DFLAGS += -DWLP2P
 DFLAGS += -DWIFI_ACT_FRAME
-DFLAGS += -DWL_CFG80211
 DFLAGS += -DNEW_COMPAT_WIRELESS
 DFLAGS += -DENABLE_INSMOD_NO_FW_LOAD
 
@@ -36,14 +35,14 @@ DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o linux_osl.o              \
 	bcmsdh_sdmmc.o dhd_custom_gpio.o sbutils.o wldev_common.o wl_android.o
 
-obj-$(CONFIG_BCM4330) += bcm4330.o
-bcm4330-objs += $(DHDOFILES)
+obj-$(CONFIG_BCM4330) += dhd.o
+dhd-objs += $(DHDOFILES)
 ifneq ($(CONFIG_WIRELESS_EXT),)
-bcm4330-objs += wl_iw.o
-DFLAGS += -DSOFTAP
+dhd-objs += wl_iw.o
+DFLAGS += -DWL_WIRELESS_EXT
 endif
 ifneq ($(CONFIG_CFG80211),)
-bcm4330-objs += wl_cfg80211.o dhd_cfg80211.o wl_cfgp2p.o wl_linux_mon.o
+dhd-objs += wl_cfg80211.o dhd_cfg80211.o wl_cfgp2p.o wl_linux_mon.o
 DFLAGS += -DWL_CFG80211
 endif
 EXTRA_CFLAGS = $(DFLAGS)

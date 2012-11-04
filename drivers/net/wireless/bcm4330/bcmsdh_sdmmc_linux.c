@@ -61,7 +61,7 @@
 
 #include <dhd_dbg.h>
 
-#ifdef CONFIG_CFG80211
+#ifdef WL_CFG80211
 extern void wl_cfg80211_set_parent_dev(void *dev);
 extern void wl_cfg80211_set_sdio_func(void *func);
 #endif
@@ -119,7 +119,7 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 	gInstance->func[func->num] = func;
 
 	if (func->num == 2) {
-#ifdef CONFIG_CFG80211
+#ifdef WL_CFG80211
 		wl_cfg80211_set_parent_dev(&func->dev);
 		//wl_cfg80211_set_sdio_func(func);
 #endif
