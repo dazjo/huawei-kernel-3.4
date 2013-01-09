@@ -1,4 +1,4 @@
-#if (defined(HUAWEI_BT_BTLA_VER30) && defined(CONFIG_HUAWEI_KERNEL))
+#if (defined(CONFIG_HUAWEI_BT_BCM43XX) && defined(CONFIG_HUAWEI_KERNEL))
 /************************************************************************************
  *
  *  Copyright (C) 2009-2011 Broadcom Corporation

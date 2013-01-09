@@ -1465,7 +1465,7 @@ static void __init msm7x2x_init(void)
 #ifndef CONFIG_HUAWEI_CAMERA
     msm7x27a_cfg_smsc911x();
 #endif
-#if (defined(HUAWEI_BT_BTLA_VER30) && defined(CONFIG_HUAWEI_KERNEL))
+#if (defined(CONFIG_HUAWEI_BT_BCM43XX) && defined(CONFIG_HUAWEI_KERNEL))
     /*before bt probe, config the bt_wake_msm gpio*/
     bt_wake_msm_config();
 #endif

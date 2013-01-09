@@ -11,7 +11,7 @@
  *
  */
 
-#if (defined(HUAWEI_BT_BLUEZ_VER30) || (!defined(CONFIG_HUAWEI_KERNEL)))
+#if (defined(CONFIG_HUAWEI_BT_WCN2243) || (!defined(CONFIG_HUAWEI_KERNEL)))
 
 #include <linux/delay.h>
 #include <linux/rfkill.h>
@@ -1050,7 +1050,7 @@ reg_get_fail:
 
 #endif
 
-#if (defined(HUAWEI_BT_BTLA_VER30) && defined(CONFIG_HUAWEI_KERNEL))
+#if (defined(CONFIG_HUAWEI_BT_BCM43XX) && defined(CONFIG_HUAWEI_KERNEL))
 
 #include <linux/delay.h>
 #include <linux/rfkill.h>

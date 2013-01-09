@@ -62,7 +62,7 @@ static void uart_wait_until_sent(struct tty_struct *tty, int timeout);
 static void uart_change_pm(struct uart_state *state, int pm_state);
 
 static void uart_port_shutdown(struct tty_port *port);
-#if (defined(HUAWEI_BT_BTLA_VER30) && defined(CONFIG_HUAWEI_KERNEL))
+#if (defined(CONFIG_HUAWEI_BT_BCM43XX) && defined(CONFIG_HUAWEI_KERNEL))
 extern void bluesleep_outgoing_data(void);
 extern void bluesleep_uart_open(struct uart_port * uport);
 extern void bluesleep_uart_close(struct uart_port* uport);
@@ -529,7 +529,7 @@ static int uart_write(struct tty_struct *tty,
 	if (!circ->buf)
 		return 0;
     
-    #if (defined(HUAWEI_BT_BTLA_VER30) && defined(CONFIG_HUAWEI_KERNEL))
+    #if (defined(CONFIG_HUAWEI_BT_BCM43XX) && defined(CONFIG_HUAWEI_KERNEL))
 	if (tty->name && !strcmp(tty->name, "ttyHS0"))
 	{
 		bluesleep_outgoing_data();
@@ -1292,7 +1292,7 @@ static void uart_close(struct tty_struct *tty, struct file *filp)
 
 	if (tty_port_close_start(port, tty, filp) == 0)
 		return;
-    #if (defined(HUAWEI_BT_BTLA_VER30) && defined(CONFIG_HUAWEI_KERNEL))
+    #if (defined(CONFIG_HUAWEI_BT_BCM43XX) && defined(CONFIG_HUAWEI_KERNEL))
 	if (tty->name && !strcmp(tty->name, "ttyHS0"))
 	{
 		bluesleep_uart_close(uport);
@@ -1562,7 +1562,7 @@ static int uart_open(struct tty_struct *tty, struct file *filp)
 	if (retval == 0)
 		retval = tty_port_block_til_ready(port, tty, filp);
 
-    #if (defined(HUAWEI_BT_BTLA_VER30) && defined(CONFIG_HUAWEI_KERNEL))
+    #if (defined(CONFIG_HUAWEI_BT_BCM43XX) && defined(CONFIG_HUAWEI_KERNEL))
 	if (tty->name && !strcmp(tty->name, "ttyHS0"))
 	{
 		bluesleep_uart_open(state->uart_port);

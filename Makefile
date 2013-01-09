@@ -568,15 +568,6 @@ else
 KBUILD_CFLAGS	+= -O2
 endif
 
-# Add Huawei Marco for different BT chip
-ifeq ($(ENABLE_BTLA_VER30),true)
-KBUILD_CFLAGS += -DHUAWEI_BT_BTLA_VER30
-endif
-ifeq ($(ENABLE_BLUEZ_VER30),true)
-KBUILD_CFLAGS += -DHUAWEI_BT_BLUEZ_VER30
-endif
-
-
 KBUILD_CFLAGS	+= -DHUAWEI_KERNEL_VERSION=\"${HUAWEI_KERNEL_VERSION}\"
 include $(srctree)/arch/$(SRCARCH)/Makefile
 

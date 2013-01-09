@@ -67,7 +67,7 @@ enum {
 };
 
 #define ADSP_RPC_PROG           0x3000000a
-#if (defined(HUAWEI_BT_BLUEZ_VER30) || (!defined(CONFIG_HUAWEI_KERNEL)))
+#if (defined(CONFIG_HUAWEI_BT_WCN2243) || (!defined(CONFIG_HUAWEI_KERNEL)))
 
 #define FPGA_MSM_CNTRL_REG2 0x90008010
 #define BAHAMA_SLAVE_ID_FM_REG 0x02
@@ -101,7 +101,7 @@ struct bt_vreg_info {
 
 void __init msm7627a_bt_power_init(void);
 #endif
-#if (defined(HUAWEI_BT_BTLA_VER30) && defined(CONFIG_HUAWEI_KERNEL))
+#if (defined(CONFIG_HUAWEI_BT_BCM43XX) && defined(CONFIG_HUAWEI_KERNEL))
 struct bt_vreg_info {
 	const char *name;
 	unsigned int pmapp_id;

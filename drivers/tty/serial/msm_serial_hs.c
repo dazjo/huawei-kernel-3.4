@@ -2135,7 +2135,7 @@ static void __exit msm_serial_hs_exit(void)
 }
 
 #if 0
-#if (defined(HUAWEI_BT_BLUEZ_VER30) || (!defined(CONFIG_HUAWEI_KERNEL)))
+#if (defined(CONFIG_HUAWEI_BT_WCN2243) || (!defined(CONFIG_HUAWEI_KERNEL)))
 static int msm_hs_runtime_idle(struct device *dev)
 {
 	/*
@@ -2178,7 +2178,7 @@ static struct platform_driver msm_serial_hs_platform_driver = {
 		.name = "msm_serial_hs",
 /*deactive pm */
 #if 0
-#if (defined(HUAWEI_BT_BLUEZ_VER30) || (!defined(CONFIG_HUAWEI_KERNEL)))
+#if (defined(CONFIG_HUAWEI_BT_WCN2243) || (!defined(CONFIG_HUAWEI_KERNEL)))
 		.pm   = &msm_hs_dev_pm_ops,
 #endif
 #endif
