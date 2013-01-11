@@ -163,8 +163,12 @@ boolean lcd_have_resume = FALSE;
 /* Remove qcom backlight mechanism,user our own */
 boolean last_backlight_setting = FALSE;
 int last_backlight_level = 0;
+#ifdef CONFIG_FB_DYNAMIC_GAMMA
 int last_gamma_mode = GAMMA25;
+#endif
+#ifdef CONFIG_FB_AUTO_CABC
 struct msmfb_cabc_config last_cabc_mode;
+#endif
 boolean last_cabc_setting = FALSE;
 boolean last_gamma_setting = FALSE;
 /*delete some lines*/
@@ -1051,7 +1055,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 					last_backlight_setting = FALSE;
 					printk("%s:Waiting for LCD resume ,then set backlight level=%d\n",__func__,last_backlight_level);
 				}
-                
+#ifdef CONFIG_FB_DYNAMIC_GAMMA
                 /* delete the judgement is_panel_support_dynamic_gamma() */
 				if(TRUE == last_gamma_setting)
 				{
@@ -1059,7 +1063,8 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 					last_gamma_setting = FALSE;
 					printk("%s:Waiting for LCD resume ,then set gamma mode =%d\n",__func__,last_gamma_mode);
 				}
-
+#endif
+#ifdef CONFIG_FB_AUTO_CABC
                 /* delete the judgement is_panel_support_auto_cabc() */
 				if(TRUE == last_cabc_setting)
 				{
@@ -1067,7 +1072,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 					last_cabc_setting =FALSE;
 					printk("%s:Waiting for LCD resume ,then set cabc mode =%d\n",__func__,last_cabc_mode.mode);
 				}
-
+#endif
 #endif
 			}
 		}
@@ -1088,6 +1093,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			last_backlight_setting = FALSE;
 			printk("%s:Waiting for LCD resume ,then set backlight level=%d\n",__func__,last_backlight_level);
 		}
+#ifdef CONFIG_FB_DYNAMIC_GAMMA
         /* delete the judgement is_panel_support_dynamic_gamma() */
 		if(TRUE == last_gamma_setting)
 		{
@@ -1095,7 +1101,8 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			last_gamma_setting = FALSE;
 			printk("%s:Waiting for LCD resume ,then set gamma mode =%d\n",__func__,last_gamma_mode);
 		}
-
+#endif
+#ifdef CONFIG_FB_AUTO_CABC
         /* delete the judgement is_panel_support_auto_cabc() */
 		if(TRUE == last_cabc_setting)
 		{
@@ -1103,6 +1110,7 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			last_cabc_setting =FALSE;
 			printk("%s:Waiting for LCD resume ,then set cabc mode =%d\n",__func__,last_cabc_mode.mode);
 		}
+#endif
 #endif
         break;
 #endif
