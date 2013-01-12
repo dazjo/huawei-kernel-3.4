@@ -32,7 +32,9 @@
 
 static int debug_mask = ANDROID_ALARM_PRINT_INFO;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
-
+#ifdef CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM
+extern int msmrtc_remote_rtc_set_alarm(struct timespec*);
+#endif /*CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM*/
 #define pr_alarm(debug_level_mask, args...) \
 	do { \
 		if (debug_mask & ANDROID_ALARM_PRINT_##debug_level_mask) { \
@@ -161,6 +163,18 @@ from_old_alarm_set:
 		if (rv < 0)
 			goto err1;
 		break;
+#ifdef CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM
+    /*set rtc alarm time ioctl case*/
+	case ANDROID_ALARM_SET_POWERUP_RTC:
+		if (copy_from_user(&new_alarm_time, (void __user *)arg,
+		    sizeof(new_alarm_time))) {
+			rv = -EFAULT;
+			goto err1;
+		}
+		printk("Set alarm time sec is %ld\n",new_alarm_time.tv_sec);
+                msmrtc_remote_rtc_set_alarm(&new_alarm_time);
+		break;
+#endif /*CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM*/
 	case ANDROID_ALARM_GET_TIME(0):
 		switch (alarm_type) {
 		case ANDROID_ALARM_RTC_WAKEUP:

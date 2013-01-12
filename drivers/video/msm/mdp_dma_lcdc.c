@@ -28,7 +28,9 @@
 #include <linux/spinlock.h>
 
 #include <linux/fb.h>
-
+#ifdef CONFIG_HUAWEI_KERNEL
+#include <linux/hardware_self_adapt.h>
+#endif
 #include "mdp.h"
 #include "msm_fb.h"
 #include "mdp4.h"
@@ -122,6 +124,10 @@ int mdp_lcdc_on(struct platform_device *pdev)
 	int ret;
 	uint32_t mask, curr;
 
+#ifdef CONFIG_HUAWEI_KERNEL
+	lcd_panel_type lcdtype = LCD_NONE;
+	lcd_align_type lcd_align = LCD_PANEL_ALIGN_LSB;
+#endif
 	mfd = (struct msm_fb_data_type *)platform_get_drvdata(pdev);
 
 	if (!mfd)
@@ -143,7 +149,19 @@ int mdp_lcdc_on(struct platform_device *pdev)
 
 	buf += calc_fb_offset(mfd, fbi, bpp);
 
-	dma2_cfg_reg = DMA_PACK_ALIGN_LSB | DMA_OUT_SEL_LCDC;
+#ifdef CONFIG_HUAWEI_KERNEL
+    lcd_align = get_lcd_align_type();
+    if(lcd_align == LCD_PANEL_ALIGN_MSB)
+    {
+          dma2_cfg_reg = DMA_PACK_ALIGN_MSB| DMA_OUT_SEL_LCDC;
+    }
+    else
+    {
+         dma2_cfg_reg = DMA_PACK_ALIGN_LSB | DMA_OUT_SEL_LCDC;
+    }
+#else
+    dma2_cfg_reg = DMA_PACK_ALIGN_LSB | DMA_OUT_SEL_LCDC;
+#endif
 
 	if (mfd->fb_imgType == MDP_BGR_565)
 		dma2_cfg_reg |= DMA_PACK_PATTERN_BGR;
@@ -311,7 +329,16 @@ int mdp_lcdc_on(struct platform_device *pdev)
 		MDP_OUTP(MDP_BASE + timer_base + 0x38, active_v_end);
 	}
 
+#ifdef CONFIG_HUAWEI_KERNEL
+	ret = 0;
+    lcdtype = get_lcd_panel_type();
+	if( (LCD_HX8357C_TIANMA_HVGA != lcdtype )&&(LCD_HX8357B_TIANMA_HVGA != lcdtype ))
+	{
+		ret = panel_next_on(pdev);
+	}
+#else
 	ret = panel_next_on(pdev);
+#endif
 	if (ret == 0) {
 		/* enable LCDC block */
 		MDP_OUTP(MDP_BASE + timer_base, 1);
@@ -319,6 +346,16 @@ int mdp_lcdc_on(struct platform_device *pdev)
 	}
 	/* MDP cmd block disable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+
+#ifdef CONFIG_HUAWEI_KERNEL
+	/*need to send 2 frame pclk data before sending sleep out command*/
+	if( (LCD_HX8357C_TIANMA_HVGA == lcdtype )||(LCD_HX8357B_TIANMA_HVGA == lcdtype ))
+	{
+		msleep(50);
+		ret = panel_next_on(pdev);
+	}
+#endif
+/* delete some line */
 
 	if (!vsync_cntrl.sysfs_created) {
 		ret = sysfs_create_group(&vsync_cntrl.dev->kobj,
@@ -353,15 +390,20 @@ int mdp_lcdc_off(struct platform_device *pdev)
 	}
 #endif
 
-	down(&mfd->dma->mutex);
+/*still need to send 2 frame data after sending sleep in command*/
+#ifdef CONFIG_HUAWEI_KERNEL
+	ret = panel_next_off(pdev);
+#endif
+    down(&mfd->dma->mutex);
 	/* MDP cmd block enable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
 	MDP_OUTP(MDP_BASE + timer_base, 0);
 	/* MDP cmd block disable */
 	mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
 	mdp_pipe_ctrl(block, MDP_BLOCK_POWER_OFF, FALSE);
-
+#ifndef CONFIG_HUAWEI_KERNEL
 	ret = panel_next_off(pdev);
+#endif
 	up(&mfd->dma->mutex);
 	atomic_set(&vsync_cntrl.suspend, 1);
 	atomic_set(&vsync_cntrl.vsync_resume, 0);
@@ -373,6 +415,7 @@ int mdp_lcdc_off(struct platform_device *pdev)
 	return ret;
 }
 
+/* merge qcom patch to solve blue screen when power on */
 void mdp_dma_lcdc_vsync_ctrl(int enable)
 {
 	unsigned long flag;
@@ -381,8 +424,7 @@ void mdp_dma_lcdc_vsync_ctrl(int enable)
 		return;
 
 	spin_lock_irqsave(&mdp_spin_lock, flag);
-	if (!enable)
-		INIT_COMPLETION(vsync_cntrl.vsync_wait);
+	/* delete two lines */
 
 	vsync_cntrl.vsync_irq_enabled = enable;
 	if (!enable)
@@ -390,15 +432,18 @@ void mdp_dma_lcdc_vsync_ctrl(int enable)
 	disabled_clocks = vsync_cntrl.disabled_clocks;
 	spin_unlock_irqrestore(&mdp_spin_lock, flag);
 
-	if (enable && disabled_clocks) {
+	if (enable && disabled_clocks) 
 		mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
-		spin_lock_irqsave(&mdp_spin_lock, flag);
+		
+	spin_lock_irqsave(&mdp_spin_lock, flag);
+	if (enable && vsync_cntrl.disabled_clocks) {
 		outp32(MDP_INTR_CLEAR, LCDC_FRAME_START);
 		mdp_intr_mask |= LCDC_FRAME_START;
 		outp32(MDP_INTR_ENABLE, mdp_intr_mask);
 		mdp_enable_irq(MDP_VSYNC_TERM);
-		spin_unlock_irqrestore(&mdp_spin_lock, flag);
+		vsync_cntrl.disabled_clocks = 0;
 	}
+	spin_unlock_irqrestore(&mdp_spin_lock, flag);
 
 	if (vsync_cntrl.vsync_irq_enabled &&
 		atomic_read(&vsync_cntrl.suspend) == 0)

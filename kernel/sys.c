@@ -54,6 +54,14 @@
 #include <asm/io.h>
 #include <asm/unistd.h>
 
+#ifdef CONFIG_HUAWEI_KERNEL_DEBUG
+#define DBG(format, arg...) do { \
+    printk(KERN_DEBUG "%s: " format "\n" , __func__ , ## arg); \
+} while (0)
+#else
+#define DBG(format, arg...) do { } while (0)
+#endif
+
 #ifndef SET_UNALIGN_CTL
 # define SET_UNALIGN_CTL(a,b)	(-EINVAL)
 #endif
@@ -116,6 +124,9 @@ EXPORT_SYMBOL(fs_overflowgid);
 int C_A_D = 1;
 struct pid *cad_pid;
 EXPORT_SYMBOL(cad_pid);
+
+/* power key detect solution for ANR */
+void del_power_key_timer(void);
 
 /*
  * If set, this is used for preparing the system to power off.
@@ -299,6 +310,19 @@ out_unlock:
 	return retval;
 }
 
+
+#ifdef CONFIG_SRECORDER_MSM
+#ifdef CONFIG_SRECORDER_POWERCOLLAPS
+#ifndef CONFIG_KPROBES
+static void emergency_restart_prepare(char *reason)
+{
+    raw_notifier_call_chain(&emergency_reboot_notifier_list, SYS_RESTART, reason);
+}
+#endif
+#endif /* CONFIG_SRECORDER_POWERCOLLAPS */
+#endif /* CONFIG_SRECORDER_MSM */
+
+
 /**
  *	emergency_restart - reboot the system
  *
@@ -309,6 +333,14 @@ out_unlock:
  */
 void emergency_restart(void)
 {
+#ifdef CONFIG_SRECORDER_MSM
+#ifdef CONFIG_SRECORDER_POWERCOLLAPS
+#ifndef CONFIG_KPROBES
+    emergency_restart_prepare(NULL);
+#endif
+#endif /* CONFIG_SRECORDER_POWERCOLLAPS */
+#endif /* CONFIG_SRECORDER_MSM */
+
 	kmsg_dump(KMSG_DUMP_EMERG);
 	machine_emergency_restart();
 }
@@ -353,6 +385,43 @@ int unregister_reboot_notifier(struct notifier_block *nb)
 	return blocking_notifier_chain_unregister(&reboot_notifier_list, nb);
 }
 EXPORT_SYMBOL(unregister_reboot_notifier);
+
+#ifdef CONFIG_SRECORDER_MSM
+#ifdef CONFIG_SRECORDER_POWERCOLLAPS
+#ifndef CONFIG_KPROBES
+/**
+ *	register_emergency_reboot_notifier - Register function to be called at reboot time
+ *	@nb: Info about notifier function to be called
+ *
+ *	Registers a function with the list of functions
+ *	to be called at reboot time.
+ *
+ *	Currently always returns zero, as blocking_notifier_chain_register()
+ *	always returns zero.
+ */
+int register_emergency_reboot_notifier(struct notifier_block *nb)
+{
+    return raw_notifier_chain_register(&emergency_reboot_notifier_list, nb);
+}
+EXPORT_SYMBOL(register_emergency_reboot_notifier);
+
+/**
+ *	unregister_emergency_reboot_notifier - Unregister previously registered reboot notifier
+ *	@nb: Hook to be unregistered
+ *
+ *	Unregisters a previously registered reboot
+ *	notifier function.
+ *
+ *	Returns zero on success, or %-ENOENT on failure.
+ */
+int unregister_emergency_reboot_notifier(struct notifier_block *nb)
+{
+    return raw_notifier_chain_unregister(&emergency_reboot_notifier_list, nb);
+}
+EXPORT_SYMBOL(unregister_emergency_reboot_notifier);
+#endif
+#endif /* CONFIG_SRECORDER_POWERCOLLAPS */
+#endif /* CONFIG_SRECORDER_MSM */
 
 /**
  *	kernel_restart - reboot the system
@@ -405,14 +474,27 @@ EXPORT_SYMBOL_GPL(kernel_halt);
  */
 void kernel_power_off(void)
 {
+    DBG("begin");
+    
 	kernel_shutdown_prepare(SYSTEM_POWER_OFF);
+
+    DBG("kernel_shutdown_prepare complete");
+    
 	if (pm_power_off_prepare)
 		pm_power_off_prepare();
+
+    DBG("before  disable_nonboot_cpus");
+    
 	disable_nonboot_cpus();
+
+    DBG("disable_nonboot_cpus complete");
+    
 	syscore_shutdown();
 	printk(KERN_EMERG "Power down.\n");
 	kmsg_dump(KMSG_DUMP_POWEROFF);
 	machine_power_off();
+
+    DBG("end");
 }
 EXPORT_SYMBOL_GPL(kernel_power_off);
 
@@ -431,6 +513,12 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 {
 	char buffer[256];
 	int ret = 0;
+
+    /* power key detect solution for ANR */
+    del_power_key_timer();
+
+
+    DBG("SYSCALL_DEFINE4  power off debug begin");
 
 	/* We only trust the superuser with rebooting the system. */
 	if (!capable(CAP_SYS_BOOT))
@@ -479,6 +567,7 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 		panic("cannot halt");
 
 	case LINUX_REBOOT_CMD_POWER_OFF:
+        DBG("case LINUX_REBOOT_CMD_POWER_OFF");
 		kernel_power_off();
 		do_exit(0);
 		break;
@@ -510,6 +599,9 @@ SYSCALL_DEFINE4(reboot, int, magic1, int, magic2, unsigned int, cmd,
 		break;
 	}
 	mutex_unlock(&reboot_mutex);
+
+    DBG("end");
+    
 	return ret;
 }
 

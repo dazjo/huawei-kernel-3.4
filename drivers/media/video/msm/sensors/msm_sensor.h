@@ -29,13 +29,20 @@
 #include <media/v4l2-subdev.h>
 #include "msm_camera_i2c.h"
 #include "msm_camera_eeprom.h"
+#include <asm/mach-types.h>
+#include "linux/hardware_self_adapt.h"
 #define Q8  0x00000100
 #define Q10 0x00000400
 
 #define MSM_SENSOR_MCLK_8HZ 8000000
 #define MSM_SENSOR_MCLK_16HZ 16000000
 #define MSM_SENSOR_MCLK_24HZ 24000000
+#define MSM_SENSOR_MCLK_48HZ 48000000
 
+#define CAMERA_NAME_LEN 128  //this size is same with CAMERA_NAME_LEN in board_msm7627a_camera.c
+extern int is_first_preview_frame ;
+extern int csi_config;
+extern bool standby_mode;
 enum msm_sensor_reg_update {
 	/* Sensor egisters that need to be updated during initialization */
 	MSM_SENSOR_REG_INIT,
@@ -140,6 +147,12 @@ struct msm_sensor_fn_t {
 		(struct msm_sensor_ctrl_t *s_ctrl, uint16_t res);
 	int32_t (*sensor_get_csi_params)(struct msm_sensor_ctrl_t *,
 		struct csi_lane_params_t *);
+	int32_t (*sensor_write_init_settings)(struct msm_sensor_ctrl_t *s_ctrl);
+	int32_t (*sensor_model_match)(struct msm_sensor_ctrl_t *s_ctrl);
+	int32_t (*sensor_set_wb)(struct msm_sensor_ctrl_t *, int);
+	int32_t (*sensor_set_effect)(struct msm_sensor_ctrl_t *, int);
+    int (*sensor_otp_reading)(struct sensor_cfg_data *cfg);
+    void (*sensor_mclk_self_adapt)(struct msm_sensor_ctrl_t *);
 };
 
 struct msm_sensor_csi_info {
@@ -186,12 +199,14 @@ struct msm_sensor_ctrl_t {
 	struct regulator **reg_ptr;
 	struct clk *cam_clk;
 	long clk_rate;
+	char sensor_name[CAMERA_NAME_LEN];
 };
 
 void msm_sensor_start_stream(struct msm_sensor_ctrl_t *s_ctrl);
 void msm_sensor_stop_stream(struct msm_sensor_ctrl_t *s_ctrl);
 void msm_sensor_group_hold_on(struct msm_sensor_ctrl_t *s_ctrl);
 void msm_sensor_group_hold_off(struct msm_sensor_ctrl_t *s_ctrl);
+int32_t msm_sensor_enable_i2c_mux(struct msm_camera_i2c_conf *i2c_conf);
 
 int32_t msm_sensor_set_fps(struct msm_sensor_ctrl_t *s_ctrl,
 			struct fps_cfg   *fps);

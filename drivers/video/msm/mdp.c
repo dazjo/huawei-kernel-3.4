@@ -1766,6 +1766,7 @@ void mdp_histogram_handle_isr(struct mdp_hist_mgmt *mgmt)
 }
 
 #ifndef CONFIG_FB_MSM_MDP40
+/* merge qcom patch to solve blue screen when power on */
 irqreturn_t mdp_isr(int irq, void *ptr)
 {
 	uint32 mdp_interrupt = 0;
@@ -1858,13 +1859,14 @@ irqreturn_t mdp_isr(int irq, void *ptr)
 			dma = &dma2_data;
 			spin_lock_irqsave(&mdp_spin_lock, flag);
 			vsync_isr = vsync_cntrl.vsync_irq_enabled;
+			disabled_clocks = vsync_cntrl.disabled_clocks;
 			/* let's disable LCDC interrupt */
 			if (dma->waiting) {
 				dma->waiting = FALSE;
 				complete(&dma->comp);
 			}
 
-			if (!vsync_isr) {
+			if (!vsync_isr && !vsync_cntrl.disabled_clocks) {
 				mdp_intr_mask &= ~LCDC_FRAME_START;
 				outp32(MDP_INTR_ENABLE, mdp_intr_mask);
 				mdp_disable_irq_nosync(MDP_VSYNC_TERM);
@@ -1874,7 +1876,7 @@ irqreturn_t mdp_isr(int irq, void *ptr)
 			}
 			spin_unlock_irqrestore(&mdp_spin_lock, flag);
 
-			if (!vsync_isr)
+			if (!vsync_isr && !disabled_clocks)
 				mdp_pipe_ctrl(MDP_CMD_BLOCK,
 					MDP_BLOCK_POWER_OFF, TRUE);
 
@@ -2387,6 +2389,13 @@ static int mdp_probe(struct platform_device *pdev)
 #endif
 	static int contSplash_update_done;
 
+/* modem side generate an interrupt,we should clear this interrupt before mdp work */
+#ifdef CONFIG_HUAWEI_KERNEL
+	#ifndef CONFIG_FB_MSM_MDP40
+		uint32 mdp_interrupt = 0;
+	#endif
+#endif
+
 	if ((pdev->id == 0) && (pdev->num_resources > 0)) {
 		mdp_init_pdev = pdev;
 		mdp_pdata = pdev->dev.platform_data;
@@ -2438,6 +2447,13 @@ static int mdp_probe(struct platform_device *pdev)
 	if (!mdp_resource_initialized)
 		return -EPERM;
 
+/* modem side generate an interrupt,we should clear this interrupt before mdp work */
+#ifdef CONFIG_HUAWEI_KERNEL
+	#ifndef CONFIG_FB_MSM_MDP40
+		mdp_interrupt = inp32(MDP_INTR_STATUS);
+		outp32(MDP_INTR_CLEAR, mdp_interrupt);
+	#endif
+#endif
 	mfd = platform_get_drvdata(pdev);
 
 	if (!mfd)

@@ -71,6 +71,8 @@ int pmapp_vreg_pincntrl_vote(const char *voter_id, uint vreg_id,
 					uint clock_id, uint vote);
 int pmapp_disp_backlight_set_brightness(int value);
 void pmapp_disp_backlight_init(void);
+void pmapp_button_backlight_init(void);
+int pmapp_button_backlight_set_brightness(int value);
 int pmapp_vreg_lpm_pincntrl_vote(const char *voter_id, uint vreg_id,
 					uint clock_id, uint vote);
 #endif

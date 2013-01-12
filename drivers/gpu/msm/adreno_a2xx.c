@@ -1983,6 +1983,7 @@ static void a2xx_start(struct adreno_device *adreno_dev)
 			0x18000000);
 	}
 
+    /* Qualcomm patch kgsl: Increase REG_RBBM_CNTL value to 0xFFFF for A203 */
 	if (adreno_is_a203(adreno_dev))
 		/* For A203 increase number of clocks that RBBM
 		 * will wait before de-asserting Register Clock

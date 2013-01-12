@@ -43,7 +43,30 @@
 #define ACDB_ID_HDMI					0x40
 #define ACDB_ID_FM_RX					0x4F
 /*Replace the max device ID,if any new device is added Specific to RTC only*/
-#define ACDB_ID_MAX                                 ACDB_ID_FM_RX
+
+#ifdef CONFIG_HUAWEI_KERNEL
+#define ACDB_ID_SPKR_PHONE_MUSIC_MONO	0xF0
+#define ACDB_ID_SPKR_PHONE_MUSIC_STEREO 	0xF1
+#endif
+
+#ifdef CONFIG_HUAWEI_KERNEL
+#define ACDB_ID_HEADSET_SPKR_MUSIC_STEREO  0xF2
+#endif
+
+#ifdef CONFIG_HUAWEI_KERNEL
+#define ACDB_ID_HANDSET_HAC_SPKR  0xF3
+#endif
+
+#ifdef CONFIG_HUAWEI_KERNEL
+#define ACDB_ID_SPKR_PHONE_PTT  0xF4
+#define ACDB_ID_SPKR_PHONE_PTT_MIC  0xF5
+#endif
+
+#ifdef CONFIG_HUAWEI_KERNEL
+#define ACDB_ID_HEADSET_STEREO_PLUS_SPKR_MONO_RX	0x13
+#endif
+
+#define ACDB_ID_MAX                                 ACDB_ID_SPKR_PHONE_PTT_MIC
 
 /* ID used for virtual devices */
 #define PSEUDO_ACDB_ID 					0xFFFF

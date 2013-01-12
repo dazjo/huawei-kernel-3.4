@@ -20,6 +20,7 @@
    COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS, RELATING TO USE OF THIS
    SOFTWARE IS DISCLAIMED.
 */
+// rollback to original BlueZ
 
 #define MGMT_INDEX_NONE			0xFFFF
 
@@ -161,6 +162,7 @@ struct mgmt_cp_set_io_capability {
 struct mgmt_cp_pair_device {
 	bdaddr_t bdaddr;
 	__u8 io_cap;
+    __u8 ssp_cap;
 } __packed;
 struct mgmt_rp_pair_device {
 	bdaddr_t bdaddr;

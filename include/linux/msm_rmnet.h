@@ -51,4 +51,15 @@ struct QMI_QOS_HDR_S {
 	unsigned long    flow_id;
 };
 
+#ifdef CONFIG_HUAWEI_KERNEL
+/*
+ * if there have special requirement need to apply.
+ */
+ #define RMNET_DEFAULT_MAX_MTU 1500
+
+int rmnet_get_max_mtu(void);
+
+#define RMNET_DATA_LEN (rmnet_get_max_mtu())
+#endif
+
 #endif /* _MSM_RMNET_H_ */

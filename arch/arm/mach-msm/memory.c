@@ -242,6 +242,27 @@ static void __init adjust_reserve_sizes(void)
 	}
 }
 
+#ifdef CONFIG_SRECORDER_MSM
+static unsigned long s_mempools_pstart_addr = 0x0;
+
+/*
+ * Function:       unsigned long get_mempools_pstart_addr(void)
+ * Description:    return address of mempools start
+ * Calls:          No
+ * Called By:      msm8625_reserve
+ * Table Accessed: No
+ * Table Updated:  No
+ * Input:          No
+ * Output:         No
+ * Return:         s_mempools_pstart_addr: address of mempools start
+ * Others:         No
+ */
+unsigned long get_mempools_pstart_addr(void)
+{
+    return s_mempools_pstart_addr;
+}
+#endif /* CONFIG_SRECORDER_MSM */
+
 static void __init reserve_memory_for_mempools(void)
 {
 	int i, memtype, membank_type;
@@ -283,6 +304,10 @@ static void __init reserve_memory_for_mempools(void)
 				 * out of multiple contiguous memory banks.
 				 */
 				mt->start = mb->start + (size - mt->size);
+#ifdef CONFIG_SRECORDER_MSM                
+                s_mempools_pstart_addr = mt->start;
+#endif /* CONFIG_SRECORDER_MSM */
+
 				ret = memblock_remove(mt->start, mt->size);
 				BUG_ON(ret);
 				break;

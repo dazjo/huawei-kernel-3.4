@@ -23,9 +23,18 @@
 #include <mach/gpio.h>
 #include <mach/camera.h>
 #include "mt9e013.h"
+#ifdef CONFIG_HUAWEI_HW_DEV_DCT
+#include <linux/hw_dev_dec.h>
+#endif
+/*Define OTP reading flag*/
+#define FALSE 0
+#define TRUE 1
+static bool OTP_READ = FALSE;
 /*=============================================================
 	SENSOR REGISTER DEFINES
 ==============================================================*/
+#define MT9E013_REG_MODEL_ID 0x0000
+#define MT9E013_MODEL_ID 0x4B00
 #define REG_GROUPED_PARAMETER_HOLD		0x0104
 #define GROUPED_PARAMETER_HOLD_OFF		0x00
 #define GROUPED_PARAMETER_HOLD			0x01
@@ -47,17 +56,29 @@
 #define Q8	0x00000100
 #define Q10	0x00000400
 #define MT9E013_MASTER_CLK_RATE 24000000
-
+/*tunnig the auto focus params, change the total step, and tune each step that it has*/
 /* AF Total steps parameters */
-#define MT9E013_TOTAL_STEPS_NEAR_TO_FAR    32
+static uint16_t mt9e013_linear_total_step = 41;
+static uint16_t mt9e013_step_jump = 4;
+#define MT9E013_TOTAL_STEPS_NEAR_TO_FAR_MAX    41
 
-uint16_t mt9e013_step_position_table[MT9E013_TOTAL_STEPS_NEAR_TO_FAR+1];
-uint16_t mt9e013_nl_region_boundary1;
-uint16_t mt9e013_nl_region_code_per_step1;
-uint16_t mt9e013_l_region_code_per_step = 4;
-uint16_t mt9e013_damping_threshold = 10;
-uint16_t mt9e013_sw_damping_time_wait = 1;
-
+uint16_t mt9e013_step_position_table[MT9E013_TOTAL_STEPS_NEAR_TO_FAR_MAX+1];
+static uint16_t mt9e013_nl_region_boundary1 = 2;
+static uint16_t mt9e013_nl_region_code_per_step1 = 25;
+static uint16_t mt9e013_l_region_code_per_step = 3;
+static uint16_t mt9e013_damping_threshold = 10;
+static uint16_t mt9e013_sw_damping_time_wait = 30;
+static uint16_t mt9e013_sw_damping_small_step = 10;
+static uint16_t mt9e013_sw_damping_time_wait_coarse = 30;
+static uint16_t mt9e013_sw_damping_small_step_coarse = 2;
+static uint16_t mt9e013_sw_damping_time_wait_fwd = 9;
+static uint16_t mt9e013_sw_damping_small_step_fwd = 5;
+static uint16_t mt9e013_sw_damping_time_wait_fine = 60;
+static uint16_t mt9e013_sw_damping_small_step_fine = 1;
+static uint16_t mt9e013_sw_damping_time_wait_snap = 9;
+static uint16_t mt9e013_sw_damping_small_step_snap = 5;
+static uint16_t mt9e013_enable_damping = 1;
+static uint16_t mt9e013_af_initial_value = 25;
 struct mt9e013_work_t {
 	struct work_struct work;
 };
@@ -374,7 +395,7 @@ static int32_t mt9e013_write_exp_gain(uint16_t gain, uint32_t line)
 	int32_t rc = 0;
 	if (gain > max_legal_gain) {
 		CDBG("Max legal gain Line:%d\n", __LINE__);
-		gain = max_legal_gain;
+		//gain = max_legal_gain;
 	}
 
 	if (mt9e013_ctrl->curr_res != FULL_SIZE) {
@@ -387,7 +408,7 @@ static int32_t mt9e013_write_exp_gain(uint16_t gain, uint32_t line)
 						   0x00000400);
 	}
 
-	gain |= 0x1000;
+	//gain |= 0x1000;
 
 	mt9e013_group_hold_on();
 	rc = mt9e013_i2c_write_w_sensor(REG_GLOBAL_GAIN, gain);
@@ -404,13 +425,14 @@ static int32_t mt9e013_set_pict_exp_gain(uint16_t gain, uint32_t line)
 	return rc;
 }
 
-#define DIV_CEIL(x, y) (x/y + (x%y) ? 1 : 0)
+#define DIV_CEIL(x, y) (x/y + ((x%y) ? 1 : 0))
 
 static int32_t mt9e013_move_focus(int direction,
 	int32_t num_steps)
 {
 	int16_t step_direction, dest_lens_position, dest_step_position;
 	int16_t target_dist, small_step, next_lens_position;
+	uint16_t sw_damping_time_wait = 1;
 	if (direction == MOVE_NEAR)
 		step_direction = 1;
 	else
@@ -421,40 +443,58 @@ static int32_t mt9e013_move_focus(int direction,
 
 	if (dest_step_position < 0)
 		dest_step_position = 0;
-	else if (dest_step_position > MT9E013_TOTAL_STEPS_NEAR_TO_FAR)
-		dest_step_position = MT9E013_TOTAL_STEPS_NEAR_TO_FAR;
+	else if (dest_step_position > mt9e013_linear_total_step)
+		dest_step_position = mt9e013_linear_total_step;
 
 	if (dest_step_position == mt9e013_ctrl->curr_step_pos)
 		return 0;
 
 	dest_lens_position = mt9e013_step_position_table[dest_step_position];
-	target_dist = step_direction *
-		(dest_lens_position - mt9e013_ctrl->curr_lens_pos);
+	CDBG("%s: Step:%d, Lens:%d\n", __func__, dest_step_position,
+		dest_lens_position);
+	if (mt9e013_enable_damping) {
+		target_dist = step_direction *
+			(dest_lens_position - mt9e013_ctrl->curr_lens_pos);
 
-	if (step_direction < 0 && (target_dist >=
-		mt9e013_step_position_table[mt9e013_damping_threshold])) {
-		small_step = DIV_CEIL(target_dist, 10);
-		mt9e013_sw_damping_time_wait = 10;
-	} else {
-		small_step = DIV_CEIL(target_dist, 4);
-		mt9e013_sw_damping_time_wait = 4;
-	}
+		if (step_direction < 0) {
+			if (num_steps >= mt9e013_damping_threshold) {
+				/* sweeping towards all the way in infinity direction between snaps*/
+				small_step = mt9e013_sw_damping_small_step_snap;
+				sw_damping_time_wait = mt9e013_sw_damping_time_wait_snap;
+			} else if (num_steps <= 4) {
+				/* reverse search during macro mode */
+				small_step = mt9e013_sw_damping_small_step_fine;
+				sw_damping_time_wait = mt9e013_sw_damping_time_wait_fine;
+			} else {
+				small_step = mt9e013_sw_damping_small_step;
+				sw_damping_time_wait = mt9e013_sw_damping_time_wait;
+			}
+		} else {
+			if (num_steps > mt9e013_step_jump) {
+				small_step = mt9e013_sw_damping_small_step_fwd;
+				sw_damping_time_wait = mt9e013_sw_damping_time_wait_fwd;
+			} else {
+				small_step = mt9e013_sw_damping_small_step_coarse;
+				sw_damping_time_wait = mt9e013_sw_damping_time_wait_coarse;
+			}
+		}
 
-	for (next_lens_position = mt9e013_ctrl->curr_lens_pos
-		+ (step_direction * small_step);
-		(step_direction * next_lens_position) <=
-		(step_direction * dest_lens_position);
-		next_lens_position += (step_direction * small_step)) {
-		mt9e013_i2c_write_w_sensor(REG_VCM_NEW_CODE,
-		next_lens_position);
-		mt9e013_ctrl->curr_lens_pos = next_lens_position;
-		usleep(mt9e013_sw_damping_time_wait*50);
+		for (next_lens_position = mt9e013_ctrl->curr_lens_pos
+			+ (step_direction * small_step);
+			(step_direction * next_lens_position) <=
+			(step_direction * dest_lens_position);
+			next_lens_position += (step_direction * small_step)) {
+			mt9e013_i2c_write_w_sensor(REG_VCM_NEW_CODE,
+			next_lens_position);
+			mt9e013_ctrl->curr_lens_pos = next_lens_position;
+			usleep(sw_damping_time_wait*50);
+		}
 	}
 
 	if (mt9e013_ctrl->curr_lens_pos != dest_lens_position) {
 		mt9e013_i2c_write_w_sensor(REG_VCM_NEW_CODE,
 		dest_lens_position);
-		usleep(mt9e013_sw_damping_time_wait*50);
+		usleep(sw_damping_time_wait*50);
 	}
 	mt9e013_ctrl->curr_lens_pos = dest_lens_position;
 	mt9e013_ctrl->curr_step_pos = dest_step_position;
@@ -476,12 +516,13 @@ static int32_t mt9e013_set_default_focus(uint8_t af_step)
 
 	return rc;
 }
-
+/*tunnig the auto focus params, change the total step, and tune each step that it has*/
 static void mt9e013_init_focus(void)
 {
 	uint8_t i;
 	mt9e013_step_position_table[0] = 0;
-	for (i = 1; i <= MT9E013_TOTAL_STEPS_NEAR_TO_FAR; i++) {
+	mt9e013_step_position_table[1] = mt9e013_af_initial_value;
+	for (i = 2; i <= mt9e013_linear_total_step; i++) {
 		if (i <= mt9e013_nl_region_boundary1) {
 			mt9e013_step_position_table[i] =
 				mt9e013_step_position_table[i-1]
@@ -496,7 +537,6 @@ static void mt9e013_init_focus(void)
 			mt9e013_step_position_table[i] = 255;
 	}
 }
-
 static int32_t mt9e013_test(enum mt9e013_test_mode_t mo)
 {
 	int32_t rc = 0;
@@ -515,6 +555,230 @@ static int32_t mt9e013_test(enum mt9e013_test_mode_t mo)
 	return rc;
 }
 
+/*lijuan add for OTP reading begin*/
+/*read OTP value function*/
+inline int32_t reading(void)
+{
+	int32_t rc = -1;
+	unsigned short i = 0;
+	unsigned short addr = 0x3800;
+	unsigned short value = 0;
+	//read the value and put them in the mt9e013_regs array.
+	for( i=0;i<(mt9e013_regs.reg_otp_size-8);i++)
+	{
+		addr = 0x3800 +2 * i;
+		rc = mt9e013_i2c_read(addr, &value, 2);	
+		if (rc < 0)
+		{
+			CDBG("can't read %0x address \n", addr);
+		}
+		else
+		{
+			mt9e013_regs.reg_otp[i].wdata = value;
+		}
+	}
+	return rc;
+}
+
+static int32_t Auto_reading(void)
+{
+	int32_t j = 0;
+	int32_t bsuccess = -1;
+	unsigned short value = 0;
+
+	for(j = 0; j<5; j++)//POLL Register 0x304A [6:5] = 11 //auto read success
+    	{
+    		msleep(5);
+    		mt9e013_i2c_read(0x304A, &value, 2);
+		if(0xFFFF == (value |0xFF9F))//finish
+		{
+			bsuccess =1;
+			CDBG("mt9e013_OTP_reading reading bsuccess = %dstart! \n",bsuccess);
+			break;
+		}
+	}
+	if(1 == bsuccess)
+	{
+
+		reading();
+
+	}
+	return bsuccess;
+}
+
+/*check which type is the right type and read*/
+static int32_t mt9e013_OTP_reading (void)
+{	
+	int32_t rc = -1;
+
+	//get the type that we have the params
+	//Do the OTP reading, From Type 35 to 30. read the data from the right type
+	CDBG("mt9e013_OTP_reading reading start! \n");
+	mt9e013_i2c_write_w_sensor(0x301A, 0x0610);
+	mt9e013_i2c_write_w_sensor(0x3134, 0xCD95);
+	mt9e013_i2c_write_w_sensor(0x304C, 0x3500);//read type 35
+	mt9e013_i2c_write_w_sensor(0x304A, 0x0010);//0x0010
+	rc = Auto_reading();
+	if(rc > 0)
+		{
+		CDBG("the right type is 35\n");
+		goto otp_probe_check;
+	}
+	
+	mt9e013_i2c_write_w_sensor(0x304C, 0x3400);//read type 34
+	mt9e013_i2c_write_w_sensor(0x304A, 0x0010);//0x0010
+	rc = Auto_reading();
+	if(rc > 0)
+		{
+		CDBG("the right type is 34\n");
+		goto otp_probe_check;
+	}
+
+	mt9e013_i2c_write_w_sensor(0x304C, 0x3300);//read type 33
+	mt9e013_i2c_write_w_sensor(0x304A, 0x0010);//0x0010
+	rc = Auto_reading();
+	if(rc > 0)
+		{
+		CDBG("the right type is 33\n");
+		goto otp_probe_check;
+	}
+
+	mt9e013_i2c_write_w_sensor(0x304C, 0x3200);//read type 32
+	mt9e013_i2c_write_w_sensor(0x304A, 0x0010);//0x0010
+	rc = Auto_reading();
+	if(rc > 0)
+		{
+		CDBG("the right type is 32\n");
+		goto otp_probe_check;
+	}
+
+	mt9e013_i2c_write_w_sensor(0x304C, 0x3100);//read type 31
+	mt9e013_i2c_write_w_sensor(0x304A, 0x0010);//0x0010
+	rc = Auto_reading();
+	if(rc > 0)
+		{
+		CDBG("the right type is 31\n");
+		goto otp_probe_check;
+	}
+
+	mt9e013_i2c_write_w_sensor(0x304C, 0x3000);//read type 30
+	mt9e013_i2c_write_w_sensor(0x304A, 0x0010);//0x0010
+	rc = Auto_reading();
+	if(rc > 0)
+		{
+		CDBG("the right type is 30\n");
+		goto otp_probe_check;
+	}
+
+otp_probe_check:
+	if(rc < 0)
+	{
+		CDBG("The OTP reading failed\n");
+		return rc;
+	}
+
+	//This is for OTP verify. check the 0x3800's first value is 2
+	if(0x2000!=(mt9e013_regs.reg_otp[0].wdata & 0xF000))
+	{
+		CDBG("The OTP reading failed addr = %0x, data = %0x\n", mt9e013_regs.reg_otp[0].waddr, mt9e013_regs.reg_otp[0].wdata);
+		rc = -1;
+		return rc;
+	}
+	//check the AWB data is OK level
+	/*if(mt9e013_regs.reg_otp[4].wdata< 0x290 ||mt9e013_regs.reg_otp[4].wdata> 0x3D9)
+	{
+		CDBG("The OTP reading failed addr = %0x, data = %0x\n", mt9e013_regs.reg_otp[5].waddr, mt9e013_regs.reg_otp[5].wdata);
+		rc = -1;
+		return rc;
+	}*/
+	//check the 0x38e2 is 0xFFFF
+	if(0!=mt9e013_regs.reg_otp[7].wdata)
+	{
+		CDBG("The OTP reading failed addr = %0x, data = %0x\n", mt9e013_regs.reg_otp[7].waddr, mt9e013_regs.reg_otp[7].wdata);
+		rc = -1;
+		return rc;
+	}
+	//check the 0x38e2 is 0xFFFF
+	if(0xFFFF!=mt9e013_regs.reg_otp[114].wdata)
+	{
+		CDBG("The OTP reading failed addr = %0x, data = %0x\n", mt9e013_regs.reg_otp[114].waddr, mt9e013_regs.reg_otp[114].wdata);
+		rc = -1;
+		return rc;
+	}
+	//check the 0x38e2 is 0xFFFF
+	/*if(0xFFFF!=mt9e013_regs.reg_otp[115].wdata)//120
+	{
+		CDBG("The OTP reading failed addr = %0x, data = %0x\n", mt9e013_regs.reg_otp[115].waddr, mt9e013_regs.reg_otp[115].wdata);
+		rc = -1;
+		return rc;
+	}*/
+	//if OTP is right, we will set the OTP_READ to TRUE
+	OTP_READ = TRUE;
+	CDBG("The OTP reading success\n");
+	return rc;
+}
+
+/*If OTP reading success, we wirte the otp value to the register*/
+static int32_t mt9e013_shading_setting (void)
+{
+	int32_t rc = 0;
+	int32_t i=0;
+	CDBG("mt9e013_shading_setting write start!reg_shading_size=%d \n",mt9e013_regs.reg_shading_size);
+	mt9e013_i2c_write_w_sensor(0x3780, 0);
+
+	if((0==mt9e013_regs.reg_otp[8].wdata) || (FALSE == OTP_READ))
+	{
+		CDBG("shading invalid, write the default\n");
+		for(i=0;i< mt9e013_regs.reg_shading_size;i++)
+		{
+			rc =mt9e013_i2c_write_w_sensor(mt9e013_regs.reg_shading[i].waddr, mt9e013_regs.reg_shading[i].wdata);
+		}
+		mt9e013_i2c_write_w_sensor(0x3780, 0x8000);
+		return rc;
+	}
+	
+
+	for(i=0;i< mt9e013_regs.reg_shading_size;i++)
+	{
+	
+		rc = mt9e013_i2c_write_w_sensor(mt9e013_regs.reg_shading[i].waddr, mt9e013_regs.reg_otp[8+i].wdata);
+		
+		if(rc < 0)
+		{
+			CDBG("Write shading register failed!address = %0x, wirte again!\n",mt9e013_regs.reg_shading[i].waddr);
+			mt9e013_i2c_write_w_sensor(mt9e013_regs.reg_shading[i].waddr, mt9e013_regs.reg_otp[8+i].wdata);
+		}
+		else
+		{
+			CDBG("address = %0x, value = %0x sucess\n",mt9e013_regs.reg_shading[i].waddr,mt9e013_regs.reg_otp[8+i].wdata);
+		}
+	}
+
+	mt9e013_i2c_write_w_sensor(0x3780, 0x8000);
+	CDBG("mt9e013_shading_setting  OTP write success! \n");
+	return rc;
+}
+static int mt9e013_read_awb_data(struct sensor_cfg_data *cfg)
+{
+	int32_t rc = 0;
+
+	//Get the AWB cabliate data from OTP, if OTP failed, then return
+	CDBG(" mt9e013_read_awb_data, start \n");
+	if((0==mt9e013_regs.reg_otp[4].wdata)|| (FALSE == OTP_READ))
+	{
+		CDBG("AWB invalid, no need to get\n");
+		return rc;
+	}	
+
+	cfg->cfg.calib_info.r_over_g = mt9e013_regs.reg_otp[4].wdata;
+	cfg->cfg.calib_info.b_over_g = mt9e013_regs.reg_otp[5].wdata;
+	cfg->cfg.calib_info.gr_over_gb = mt9e013_regs.reg_otp[6].wdata;
+	CDBG(" mt9e013_read_awb_data, end rc = %d \n",rc);
+	return rc;
+}
+
+/*lijuan add for OTP reading end*/
+
 static int32_t mt9e013_sensor_setting(int update_type, int rt)
 {
 
@@ -531,6 +795,7 @@ static int32_t mt9e013_sensor_setting(int update_type, int rt)
 			mt9e013_regs.reg_mipi_size);
 		mt9e013_i2c_write_w_table(mt9e013_regs.rec_settings,
 			mt9e013_regs.rec_size);
+		mt9e013_shading_setting( );
 		cam_debug_init();
 		CSI_CONFIG = 0;
 	} else if (update_type == UPDATE_PERIODIC) {
@@ -574,8 +839,9 @@ static int32_t mt9e013_sensor_setting(int update_type, int rt)
 			msleep(10);
 			CSI_CONFIG = 1;
 		}
-		mt9e013_move_focus(MOVE_NEAR, stored_af_step);
 		mt9e013_start_stream();
+		mt9e013_move_focus(MOVE_NEAR, stored_af_step);
+		//mt9e013_start_stream();
 	}
 	return rc;
 }
@@ -659,6 +925,10 @@ static int32_t mt9e013_set_sensor_mode(int mode,
 
 static int32_t mt9e013_power_down(void)
 {
+	if (mt9e013_ctrl->sensordata->vreg_disable_func)
+    {
+        mt9e013_ctrl->sensordata->vreg_disable_func(0);
+    }
 	return 0;
 }
 
@@ -666,6 +936,10 @@ static int mt9e013_probe_init_done(const struct msm_camera_sensor_info *data)
 {
 	CDBG("probe done\n");
 	gpio_free(data->sensor_reset);
+	if (data->vreg_disable_func)
+	{
+		data->vreg_disable_func(0);
+	}
 	return 0;
 }
 
@@ -674,6 +948,13 @@ static int mt9e013_probe_init_sensor(const struct msm_camera_sensor_info *data)
 	int32_t rc = 0;
 	uint16_t chipid = 0;
 	CDBG("%s: %d\n", __func__, __LINE__);
+
+    if (data->vreg_enable_func)
+    {
+		data->vreg_enable_func(1);
+    }
+
+	
 	rc = gpio_request(data->sensor_reset, "mt9e013");
 	CDBG(" mt9e013_probe_init_sensor\n");
 	if (!rc) {
@@ -687,10 +968,10 @@ static int mt9e013_probe_init_sensor(const struct msm_camera_sensor_info *data)
 	}
 
 	CDBG(" mt9e013_probe_init_sensor is called\n");
-	rc = mt9e013_i2c_read(0x0000, &chipid, 2);
-	CDBG("ID: %d\n", chipid);
+	rc = mt9e013_i2c_read(MT9E013_REG_MODEL_ID, &chipid, 2);
+	CDBG("ID: 0x%x\n", chipid);
 	/* 4. Compare sensor ID to MT9E013 ID: */
-	if (chipid != 0x4B00) {
+	if (chipid != MT9E013_MODEL_ID){
 		rc = -ENODEV;
 		CDBG("mt9e013_probe_init_sensor fail chip id doesnot match\n");
 		goto init_probe_fail;
@@ -805,11 +1086,11 @@ static int mt9e013_i2c_probe(struct i2c_client *client,
 	mt9e013_client = client;
 
 
-	CDBG("mt9e013_probe successed! rc = %d\n", rc);
+	CDBG("mt9e013_i2c_probe OK!!!! rc = %d\n", rc);
 	return 0;
 
 probe_failure:
-	CDBG("mt9e013_probe failed! rc = %d\n", rc);
+	CDBG("mt9e013_i2c_probe failed! rc = %d\n", rc);
 	return rc;
 }
 
@@ -952,7 +1233,7 @@ int mt9e013_sensor_config(void __user *argp)
 			break;
 
 		case CFG_GET_AF_MAX_STEPS:
-			cdata.max_steps = MT9E013_TOTAL_STEPS_NEAR_TO_FAR;
+			cdata.max_steps = mt9e013_linear_total_step;
 			if (copy_to_user((void *)argp,
 				&cdata,
 				sizeof(struct sensor_cfg_data)))
@@ -969,6 +1250,14 @@ int mt9e013_sensor_config(void __user *argp)
 			rc = mt9e013_send_wb_info(
 				&(cdata.cfg.wb_info));
 			break;
+		/*lijuan add for AWB OTP*/
+		case CFG_GET_CALIB_DATA:
+			rc = mt9e013_read_awb_data(&cdata);
+			if (rc < 0)
+				break;
+			if (copy_to_user((void *)argp,&cdata,	sizeof(struct sensor_cfg_data)))
+				rc = -EFAULT;	
+			break;
 
 		default:
 			rc = -EFAULT;
@@ -984,6 +1273,9 @@ static int mt9e013_sensor_release(void)
 {
 	int rc = -EBADF;
 	mutex_lock(&mt9e013_mut);
+	/* Push lens to default addr. */
+	mt9e013_set_default_focus(0);
+	msleep(100);
 	mt9e013_power_down();
 	gpio_set_value_cansleep(mt9e013_ctrl->sensordata->sensor_reset, 0);
 	msleep(5);
@@ -1009,13 +1301,29 @@ static int mt9e013_sensor_probe(const struct msm_camera_sensor_info *info,
 	msm_camio_clk_rate_set(MT9E013_MASTER_CLK_RATE);
 	rc = mt9e013_probe_init_sensor(info);
 	if (rc < 0)
+	{
+		CDBG("mt9e013 probe failed!\n");
 		goto probe_fail;
+	}
+	else
+	{
+		CDBG("mt9e013 probe succeed!\n");
+	}
+	mt9e013_OTP_reading();
+
 	s->s_init = mt9e013_sensor_open_init;
 	s->s_release = mt9e013_sensor_release;
 	s->s_config  = mt9e013_sensor_config;
-	s->s_mount_angle = info->sensor_platform_info->mount_angle;
+	s->s_camera_type = BACK_CAMERA_2D;
+	s->s_mount_angle = 0;
 	gpio_set_value_cansleep(info->sensor_reset, 0);
 	mt9e013_probe_init_done(info);
+
+    #ifdef CONFIG_HUAWEI_HW_DEV_DCT
+    /* detect current device successful, set the flag as present */
+    set_hw_dev_flag(DEV_I2C_CAMERA_MAIN);
+    #endif
+    
 	return rc;
 
 probe_fail:
@@ -1051,43 +1359,150 @@ MODULE_LICENSE("GPL v2");
 
 static bool streaming = 1;
 
+static int mt9e013_set_sw_damping(void *data, u64 val)
+{
+	mt9e013_enable_damping = val;
+	return 0;
+}
+
+static int mt9e013_get_sw_damping(void *data, u64 *val)
+{
+	*val = mt9e013_enable_damping;
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(af_damping, mt9e013_get_sw_damping,
+			mt9e013_set_sw_damping, "%llu\n");
+
+static int mt9e013_set_af_codestep(void *data, u64 val)
+{
+	mt9e013_l_region_code_per_step = val;
+	mt9e013_init_focus();
+	return 0;
+}
+
+static int mt9e013_get_af_codestep(void *data, u64 *val)
+{
+	*val = mt9e013_l_region_code_per_step;
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(af_codeperstep, mt9e013_get_af_codestep,
+			mt9e013_set_af_codestep, "%llu\n");
+
+static int mt9e013_set_af_nonlinear(void *data, u64 val)
+{
+	mt9e013_nl_region_code_per_step1 = val & 0xFFFF;
+	mt9e013_nl_region_boundary1 = (val >> 16) & 0xFFFF;
+	return 0;
+}
+
+static int mt9e013_get_af_nonlinear(void *data, u64 *val)
+{
+	*val = mt9e013_nl_region_code_per_step1 |
+		(mt9e013_nl_region_boundary1 << 16);
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(cam_nonlinear, mt9e013_get_af_nonlinear,
+			mt9e013_set_af_nonlinear, "%llu\n");
+
+static int mt9e013_set_af_stepparam(void *data, u64 val)
+{
+	mt9e013_sw_damping_small_step = val & 0xFF;
+	mt9e013_sw_damping_small_step_coarse = (val >> 8) & 0xFF;
+	mt9e013_sw_damping_small_step_fine = (val >> 16) & 0xFF;
+	mt9e013_sw_damping_small_step_snap = (val >> 24) & 0xFF;
+	mt9e013_sw_damping_small_step_fwd = mt9e013_sw_damping_small_step_snap;
+	printk("%s: step:%d, coarse:%d, fine:%d, snap:%d, fwd:%d\n", __func__,
+		mt9e013_sw_damping_small_step, mt9e013_sw_damping_small_step_coarse,
+		mt9e013_sw_damping_small_step_fine, mt9e013_sw_damping_small_step_snap,
+		mt9e013_sw_damping_small_step_fwd);
+	return 0;
+}
+
+static int mt9e013_get_af_stepparam(void *data, u64 *val)
+{
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(cam_stepparam, mt9e013_get_af_stepparam,
+			mt9e013_set_af_stepparam, "%llu\n");
+
+static int mt9e013_set_af_timeparam(void *data, u64 val)
+{
+	mt9e013_sw_damping_time_wait = val & 0xFF;
+	mt9e013_sw_damping_time_wait_coarse = (val >> 8) & 0xFF;
+	mt9e013_sw_damping_time_wait_fine = (val >> 16) & 0xFF;
+	mt9e013_sw_damping_time_wait_snap = (val >> 24) & 0xFF;
+	mt9e013_sw_damping_time_wait_fwd = mt9e013_sw_damping_time_wait_snap;
+	printk("%s: time:%d, coarse:%d, fine:%d, snap:%d, fwd:%d\n", __func__,
+		mt9e013_sw_damping_time_wait, mt9e013_sw_damping_time_wait_coarse,
+		mt9e013_sw_damping_time_wait_fine, mt9e013_sw_damping_time_wait_snap,
+		mt9e013_sw_damping_time_wait_fwd);
+	return 0;
+}
+
+static int mt9e013_get_af_timeparam(void *data, u64 *val)
+{
+	return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(cam_timeparam, mt9e013_get_af_timeparam,
+			mt9e013_set_af_timeparam, "%llu\n");
+
+static int mt9e013_set_linear_total_step(void *data, u64 val)
+{
+	mt9e013_linear_total_step = val & 0xFF;
+	mt9e013_damping_threshold = (val >> 8) & 0xFF;
+	mt9e013_step_jump = (val >> 16) & 0xFF;
+	return 0;
+}
 static int mt9e013_focus_test(void *data, u64 *val)
 {
 	int i = 0;
 	mt9e013_set_default_focus(0);
 
-	for (i = 90; i < 256; i++) {
-		mt9e013_i2c_write_w_sensor(REG_VCM_NEW_CODE, i);
-		msleep(5000);
+	msleep(3000);
+	for (i = 0; i < mt9e013_linear_total_step; i++) {
+		mt9e013_move_focus(MOVE_NEAR, 1);
+		CDBG("moved to index =[%d]\n", i);
+		msleep(1000);
 	}
-	msleep(5000);
-	for (i = 255; i > 90; i--) {
-		mt9e013_i2c_write_w_sensor(REG_VCM_NEW_CODE, i);
-		msleep(5000);
+
+	for (i = 0; i < mt9e013_linear_total_step; i++) {
+		mt9e013_move_focus(MOVE_FAR, 1);
+		CDBG("moved to index =[%d]\n", i);
+		msleep(1000);
 	}
 	return 0;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(cam_focus, mt9e013_focus_test,
-			NULL, "%lld\n");
+			mt9e013_set_linear_total_step, "%lld\n");
 
 static int mt9e013_step_test(void *data, u64 *val)
 {
 	int i = 0;
 	mt9e013_set_default_focus(0);
 
-	for (i = 0; i < MT9E013_TOTAL_STEPS_NEAR_TO_FAR; i++) {
-		mt9e013_move_focus(MOVE_NEAR, 1);
-		msleep(5000);
+	for (i = 0; i < mt9e013_linear_total_step; i+=mt9e013_step_jump) {
+		mt9e013_move_focus(MOVE_NEAR, mt9e013_step_jump);
+		msleep(1000);
 	}
 
-	mt9e013_move_focus(MOVE_FAR, MT9E013_TOTAL_STEPS_NEAR_TO_FAR);
-	msleep(5000);
+	mt9e013_move_focus(MOVE_FAR, mt9e013_linear_total_step);
+	msleep(1000);
+	return 0;
+}
+
+static int mt9e013_set_af_initial(void *data, u64 val)
+{
+	mt9e013_af_initial_value = val & 0xFF;
+	mt9e013_sw_damping_small_step_fwd = (val >> 8) & 0xFF;
+	mt9e013_sw_damping_time_wait_fwd = (val >> 16) & 0xFF;
+	printk("af_initial:%d, step:%d, wait:%d\n", mt9e013_af_initial_value,
+		mt9e013_sw_damping_small_step_fwd, mt9e013_sw_damping_time_wait_fwd);
 	return 0;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(cam_step, mt9e013_step_test,
-			NULL, "%lld\n");
+			mt9e013_set_af_initial, "%lld\n");
 
 static int cam_debug_stream_set(void *data, u64 val)
 {
@@ -1123,12 +1538,26 @@ static int cam_debug_init(void)
 	cam_dir = debugfs_create_dir("mt9e013", debugfs_base);
 	if (!cam_dir)
 		return -ENOMEM;
-
-	if (!debugfs_create_file("focus", S_IRUGO | S_IWUSR, cam_dir,
+	if (!debugfs_create_file("af_codeperstep", S_IRUGO | S_IWUSR, cam_dir,
+							 NULL, &af_codeperstep))
+		return -ENOMEM;
+	if (!debugfs_create_file("af_damping", S_IRUGO | S_IWUSR, cam_dir,
+							 NULL, &af_damping))
+		return -ENOMEM;
+	if (!debugfs_create_file("af_linear", S_IRUGO | S_IWUSR, cam_dir,
 							 NULL, &cam_focus))
 		return -ENOMEM;
-	if (!debugfs_create_file("step", S_IRUGO | S_IWUSR, cam_dir,
+	if (!debugfs_create_file("af_ringing", S_IRUGO | S_IWUSR, cam_dir,
 							 NULL, &cam_step))
+		return -ENOMEM;
+	if (!debugfs_create_file("af_nonlinear", S_IRUGO | S_IWUSR, cam_dir,
+							 NULL, &cam_nonlinear))
+		return -ENOMEM;
+	if (!debugfs_create_file("af_stepparam", S_IRUGO | S_IWUSR, cam_dir,
+							 NULL, &cam_stepparam))
+		return -ENOMEM;
+	if (!debugfs_create_file("af_timeparam", S_IRUGO | S_IWUSR, cam_dir,
+							 NULL, &cam_timeparam))
 		return -ENOMEM;
 	if (!debugfs_create_file("stream", S_IRUGO | S_IWUSR, cam_dir,
 							 NULL, &cam_stream))

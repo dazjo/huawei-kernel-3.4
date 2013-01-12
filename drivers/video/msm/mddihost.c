@@ -39,6 +39,9 @@ extern uint32 *mddi_reg_read_value_ptr;
 mddi_lcd_func_type mddi_lcd;
 
 extern mddi_client_capability_type mddi_client_capability_pkt;
+#ifdef CONFIG_HUAWEI_KERNEL
+extern int from_pwdn_chg_resume(void);
+#endif
 
 #ifdef MDDI_HOST_WINDOW_WORKAROUND
 /* Tables showing number of rows that would cause a packet length
@@ -199,7 +202,6 @@ int mddi_host_register_read(uint32 reg_addr,
 
 	return ret;
 }				/* mddi_host_register_read */
-
 int mddi_host_register_write(uint32 reg_addr,
      uint32 reg_val, enum mddi_data_packet_size_type packet_size,
      boolean wait, mddi_llist_done_cb_type done_cb, mddi_host_type host) {
@@ -208,7 +210,9 @@ int mddi_host_register_write(uint32 reg_addr,
 	mddi_register_access_packet_type *regacc_pkt_ptr;
 	uint16 curr_llist_idx;
 	int ret = 0;
-
+ #ifdef CONFIG_HUAWEI_KERNEL
+    uint8 time_out = 5;
+ #endif
 	if (in_interrupt())
 		MDDI_MSG_CRIT("Called from ISR context\n");
 
@@ -253,15 +257,28 @@ int mddi_host_register_write(uint32 reg_addr,
 				   done_cb, host);
 
 	up(&mddi_host_mutex);
-
+#ifdef CONFIG_HUAWEI_KERNEL
+    if(from_pwdn_chg_resume())
+    {
+        time_out = 2;
+    }
+    else 
+    {
+        time_out = 5;
+    }
+#endif
 	if (wait) {
 		int wait_ret;
 
 		mddi_linked_list_notify_type *llist_notify_ptr;
 		llist_notify_ptr = &llist_extern_notify[host][curr_llist_idx];
+     #ifdef CONFIG_HUAWEI_KERNEL
 		wait_ret = wait_for_completion_timeout(
+					&(llist_notify_ptr->done_comp), time_out * HZ);
+     #else
+        wait_ret = wait_for_completion_timeout(
 					&(llist_notify_ptr->done_comp), 5 * HZ);
-
+     #endif
 		if (wait_ret <= 0)
 			ret = -EBUSY;
 

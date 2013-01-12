@@ -32,7 +32,9 @@ enum {
 	DEBOUNCE_UNKNOWN =
 		DEBOUNCE_PRESSED | DEBOUNCE_NOTPRESSED,
 };
-
+#define SLIDE_CLOSE   1
+#define SLIDE_OPEN    0
+static int slide_pressed = SLIDE_CLOSE;
 struct gpio_key_state {
 	struct gpio_input_state *ds;
 	uint8_t debounce;
@@ -167,7 +169,7 @@ static irqreturn_t gpio_event_input_irq_handler(int irq, void *dev_id)
 	int keymap_index = ks - ds->key_state;
 	const struct gpio_event_direct_entry *key_entry;
 	unsigned long irqflags;
-	int pressed;
+	int pressed = SLIDE_CLOSE;
 
 	if (!ds->use_irq)
 		return IRQ_HANDLED;
@@ -205,10 +207,15 @@ static irqreturn_t gpio_event_input_irq_handler(int irq, void *dev_id)
 		input_event(ds->input_devs->dev[key_entry->dev], ds->info->type,
 			    key_entry->code, pressed);
 		input_sync(ds->input_devs->dev[key_entry->dev]);
+		slide_pressed = pressed; 
 	}
 	return IRQ_HANDLED;
 }
-
+/*return slide status*/
+int get_slide_pressed(void)
+{
+	return slide_pressed;
+}
 static int gpio_event_input_request_irqs(struct gpio_input_state *ds)
 {
 	int i;

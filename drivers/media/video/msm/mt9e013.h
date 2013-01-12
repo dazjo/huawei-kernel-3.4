@@ -170,5 +170,11 @@ struct mt9e013_reg {
 	const unsigned short reg_60fps_size;
 	const struct mt9e013_i2c_reg_conf *reg_120fps;
 	const unsigned short reg_120fps_size;
+    /*add OTP arrays that can contain OTP when reading, */
+    /*add shading arrays that can contain shading */
+    const struct mt9e013_i2c_reg_conf *reg_shading;
+	const unsigned short reg_shading_size;
+	struct mt9e013_i2c_reg_conf *reg_otp;
+	unsigned short reg_otp_size;
 };
 #endif /* MT9E013_H */

@@ -61,6 +61,28 @@ struct dpm_drv_wd_data {
 	struct task_struct *tsk;
 };
 
+/*add qcom debug code*/
+#ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+void print_dpm_list(void)
+{
+    int i=0;
+	struct device *dev;
+	
+    mutex_lock(&dpm_list_mtx);
+    printk("HW debug ");
+
+	list_for_each_entry(dev, &dpm_list, power.entry){
+		printk("%s,",dev_name(dev));
+		if(++i%20 == 0){
+            printk("\n");
+		}
+	}
+    mutex_unlock(&dpm_list_mtx);
+	return;
+}
+EXPORT_SYMBOL_GPL(print_dpm_list);
+#endif
+
 static int async_error;
 
 /**

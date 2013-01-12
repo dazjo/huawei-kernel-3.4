@@ -142,3 +142,5 @@ obj-$(CONFIG_PM_DEVFREQ)	+= devfreq/
 obj-$(CONFIG_MOBICORE_SUPPORT)  += gud/
 
 obj-$(CONFIG_MSM_QDSS)		+= coresight/
+obj-$(CONFIG_HUAWEI_NFC_PN544) += nfc/
+obj-$(CONFIG_HUAWEI_HW_DEV_DCT) += devdetect/

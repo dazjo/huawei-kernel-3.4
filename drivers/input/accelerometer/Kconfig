@@ -1,0 +1,56 @@
+#
+# accelerometer driver configuration
+#
+menuconfig HUAWEI_FEATURE_INPUT_ACCELEROMETER
+	bool "Accelerometer"
+	depends on HUAWEI_KERNEL = y
+	default n 
+	help
+	  Say Y here, and a list of supported ACCELEROMETERs will be displayed.
+	  This option doesn't affect the kernel.
+
+	 
+#/*delete select SERIO*/
+if HUAWEI_FEATURE_INPUT_ACCELEROMETER
+
+config HUAWEI_FEATURE_ACCELEROMETER_ADXL345
+	tristate "ADI ADXL345 accelerometer"	
+	depends on HUAWEI_KERNEL = y
+	default n 
+	help
+	  Say Y here if you have the ADXL345 accelerometer.
+
+	  
+config HUAWEI_FEATURE_ACCELEROMETER_ST_L1S35DE
+	tristate "ST LIS35DE accelerometer"	
+	depends on HUAWEI_KERNEL = y
+	default n 
+	help
+	  Say Y here if you have the ST LIS35DE accelerometer.
+config HUAWEI_FEATURE_SENSORS_ACCELEROMETER_MMA8452
+	tristate "FREESCALE MMA8452 accelerometer"
+	default n 
+	help
+	  Say Y here if you have the FREESCALE MMA8452 accelerometer.
+
+config HUAWEI_FEATURE_SENSORS_ACCELEROMETER_BOSCH_BMA250
+	tristate "BOSCH BMA250 accelerometer"
+	default n 
+	help
+	  Say Y here if you have the BOSCH BMA250 accelerometer.
+config HUAWEI_FEATURE_SENSORS_ACCELEROMETER_ADI_ADXL346
+	tristate "ADI ADXL346 accelerometer"
+	default n 
+	help
+	  Say Y here if you have the ADI ADXL346 accelerometer.
+
+config HUAWEI_FEATURE_SENSORS_ACCELEROMETER_ST_LIS3XH
+	tristate "ST LIS3DH and LIS331DLH accelerometer"	
+	default n 
+	help
+	  Say Y here if you have the ST LIS3DH and LIS331DLH accelerometer.
+config HUAWEI_FEATURE_SENSORS_ACCELEROMETER_KXTIK1004
+	tristate "KXTIK-1004 accelerometer"	
+	help
+	  Say Y here if you have the KXTIK-1004 accelerometer.
+endif

@@ -82,6 +82,8 @@ struct s5k4e1_reg {
 	const unsigned short reg_mipi_size;
 	const struct s5k4e1_i2c_reg_conf *rec_settings;
 	const unsigned short rec_size;
+	const struct s5k4e1_i2c_reg_conf *reg_lc;
+	const unsigned short reg_lc_size;
 	const struct s5k4e1_i2c_reg_conf *reg_pll_p;
 	const unsigned short reg_pll_p_size;
 	const struct s5k4e1_i2c_reg_conf *reg_pll_s;

@@ -19,6 +19,7 @@
    COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS, RELATING TO USE OF THIS
    SOFTWARE IS DISCLAIMED.
 */
+// rollback to original BlueZ
 
 #include <linux/interrupt.h>
 #include <linux/module.h>
@@ -655,7 +656,6 @@ static u8 smp_cmd_pairing_random(struct l2cap_conn *conn, struct sk_buff *skb)
 static int smp_encrypt_link(struct hci_conn *hcon, struct link_key *key)
 {
 	struct key_master_id *master;
-	u8 sec_level;
 	u8 zerobuf[8];
 
 	if (!hcon || !key || !key->data)
@@ -670,17 +670,6 @@ static int smp_encrypt_link(struct hci_conn *hcon, struct link_key *key)
 
 	hcon->enc_key_size = key->pin_len;
 	hcon->sec_req = TRUE;
-	sec_level = authreq_to_seclevel(key->auth);
-
-	BT_DBG("cur %d, req: %d", hcon->sec_level, sec_level);
-
-	if (sec_level > hcon->sec_level)
-		hcon->pending_sec_level = sec_level;
-
-
-	if (!(hcon->link_mode & HCI_LM_ENCRYPT))
-		hci_conn_hold(hcon);
-
 	hci_le_start_enc(hcon, master->ediv, master->rand, key->val);
 
 	return 0;
@@ -705,6 +694,11 @@ static u8 smp_cmd_security_req(struct l2cap_conn *conn, struct sk_buff *skb)
 		if (smp_encrypt_link(hcon, key) < 0)
 			goto invalid_key;
 
+		hcon->sec_level = authreq_to_seclevel(key->auth);
+
+		if (!(hcon->link_mode & HCI_LM_ENCRYPT))
+			hci_conn_hold(hcon);
+
 		return 0;
 	}
 
@@ -716,7 +710,6 @@ invalid_key:
 	memset(&cp, 0, sizeof(cp));
 	build_pairing_cmd(conn, &cp, NULL, rp->auth_req);
 
-	hcon->pending_sec_level = authreq_to_seclevel(rp->auth_req);
 	hcon->preq[0] = SMP_CMD_PAIRING_REQ;
 	memcpy(&hcon->preq[1], &cp, sizeof(cp));
 
@@ -736,26 +729,33 @@ int smp_conn_security(struct l2cap_conn *conn, __u8 sec_level)
 	struct hci_conn *hcon = conn->hcon;
 	__u8 authreq;
 
-	BT_DBG("conn %p hcon %p %d req: %d",
-			conn, hcon, hcon->sec_level, sec_level);
+	BT_DBG("conn %p hcon %p level 0x%2.2x", conn, hcon, sec_level);
 
-	if (IS_ERR(hcon->hdev->tfm))
+	if (IS_ERR(hcon->hdev->tfm)) {
+		BT_DBG("IS_ERR");
 		return 1;
+	}
 
-	if (test_bit(HCI_CONN_ENCRYPT_PEND, &hcon->pend))
+	if (test_bit(HCI_CONN_ENCRYPT_PEND, &hcon->pend)) {
+		BT_DBG("HCI_CONN_ENCRYPT_PEND");
 		return -EINPROGRESS;
+	}
 
-	if (sec_level == BT_SECURITY_LOW)
+	if (sec_level == BT_SECURITY_LOW) {
+		BT_DBG("BT_SECURITY_LOW");
 		return 1;
+	}
 
-
-	if (hcon->sec_level >= sec_level)
+	if (hcon->sec_level > sec_level) {
+		BT_DBG("hcon->sec_level > sec_level");
 		return 1;
+	}
 
 	authreq = seclevel_to_authreq(sec_level);
 
+	BT_ERR("conn = %p, sec: %d", conn, sec_level);
 	hcon->smp_conn = conn;
-	hcon->pending_sec_level = sec_level;
+	hcon->sec_level = sec_level;
 
 	if ((hcon->link_mode & HCI_LM_MASTER) && !hcon->sec_req) {
 		struct link_key *key;
@@ -780,7 +780,6 @@ int smp_conn_security(struct l2cap_conn *conn, __u8 sec_level)
 					msecs_to_jiffies(SMP_TIMEOUT));
 
 		smp_send_cmd(conn, SMP_CMD_PAIRING_REQ, sizeof(cp), &cp);
-		hci_conn_hold(hcon);
 	} else {
 		struct smp_cmd_security_req cp;
 		cp.auth_req = authreq;
@@ -788,6 +787,7 @@ int smp_conn_security(struct l2cap_conn *conn, __u8 sec_level)
 	}
 
 done:
+	hcon->pending_sec_level = sec_level;
 	set_bit(HCI_CONN_ENCRYPT_PEND, &hcon->pend);
 
 	return 0;
@@ -1040,17 +1040,15 @@ int smp_link_encrypt_cmplt(struct l2cap_conn *conn, u8 status, u8 encrypt)
 
 	clear_bit(HCI_CONN_ENCRYPT_PEND, &hcon->pend);
 
-	if (!status && encrypt && hcon->sec_level < hcon->pending_sec_level)
-		hcon->sec_level = hcon->pending_sec_level;
-
 	if (!status && encrypt && !hcon->sec_req)
-		return smp_distribute_keys(conn, 0);
+		smp_distribute_keys(conn, 0);
 
 	/* Fall back to Pairing request if failed a Link Security request */
 	else if (hcon->sec_req  && (status || !encrypt))
-		smp_conn_security(conn, hcon->pending_sec_level);
+		smp_conn_security(conn, hcon->sec_level);
 
-	hci_conn_put(hcon);
+	else
+		hci_conn_put(hcon);
 
 	return 0;
 }

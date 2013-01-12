@@ -27,6 +27,15 @@
 #include "a2xx_reg.h"
 #include "a3xx_reg.h"
 
+#ifdef CONFIG_DEVICE_CHECK
+#include <linux/dev_check.h>
+/* 在实际测试时，发现GPU挂死之前，会进入adreno_dump函数多次，导致会多次向exception节点写入数据，
+   在此加入一个全局变量，当第一次进入dump流程时，向节点写数据，然后把这个全局变置1，之后再进入dump
+   流程时，不再向节点写数据
+*/
+static int dc_adreno_dump_flag = 0;
+#endif /* End of CONFIG_DEVICE_CHECK */
+
 #define INVALID_RB_CMD 0xaaaaaaaa
 #define NUM_DWORDS_OF_RINGBUFFER_HISTORY 100
 
@@ -709,6 +718,14 @@ static int adreno_dump(struct kgsl_device *device)
 		adreno_dump_a2xx(device);
 	else if (adreno_is_a3xx(adreno_dev))
 		adreno_dump_a3xx(device);
+		
+#ifdef CONFIG_DEVICE_CHECK
+    if(0 == dc_adreno_dump_flag)
+    {
+        DC_PRINT2EXCEPTION("Device_Check", "Device_Check: %s %d abnormal,handler!!!", "adreno_postmortem", 0);
+        dc_adreno_dump_flag = 1;
+    }
+#endif /* End of CONFIG_DEVICE_CHECK */
 
 	pt_base = kgsl_mmu_get_current_ptbase(&device->mmu);
 	cur_pt_base = pt_base;

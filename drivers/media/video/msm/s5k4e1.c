@@ -23,7 +23,11 @@
 #include <mach/camera.h>
 #include <media/msm_camera.h>
 #include "s5k4e1.h"
-
+#ifdef CONFIG_HUAWEI_HW_DEV_DCT
+#include <linux/hw_dev_dec.h>
+#endif
+#undef CDBG
+#define CDBG(fmt, args...) printk(KERN_INFO "s5k4e1.c: " fmt, ## args)
 /* 16bit address - 8 bit context register structure */
 #define Q8	0x00000100
 #define Q10	0x00000400
@@ -162,7 +166,7 @@ static int32_t s5k4e1_i2c_write_b_sensor(unsigned short waddr, uint8_t bdata)
 	buf[0] = (waddr & 0xFF00) >> 8;
 	buf[1] = (waddr & 0x00FF);
 	buf[2] = bdata;
-	CDBG("i2c_write_b addr = 0x%x, val = 0x%x\n", waddr, bdata);
+//	CDBG("i2c_write_b addr = 0x%x, val = 0x%x\n", waddr, bdata);
 	rc = s5k4e1_i2c_txdata(s5k4e1_client->addr, buf, 3);
 	if (rc < 0) {
 		CDBG("i2c_write_b failed, addr = 0x%x, val = 0x%x!\n",
@@ -187,35 +191,21 @@ static int32_t s5k4e1_i2c_write_b_table(struct s5k4e1_i2c_reg_conf const
 	return rc;
 }
 
-static int32_t s5k4e1_af_i2c_txdata(unsigned short saddr,
-		unsigned char *txdata, int length)
-{
-	struct i2c_msg msg[] = {
-		{
-			.addr = saddr,
-			.flags = 0,
-			.len = length,
-			.buf = txdata,
-		},
-	};
-	if (i2c_transfer(s5k4e1_af_client->adapter, msg, 1) < 0) {
-		pr_err("s5k4e1_af_i2c_txdata faild 0x%x\n", saddr);
-		return -EIO;
-	}
-
-	return 0;
-}
-
 static int32_t s5k4e1_af_i2c_write_b_sensor(uint8_t waddr, uint8_t bdata)
 {
 	int32_t rc = -EFAULT;
 	unsigned char buf[2];
+	unsigned short saddr = 0;
 
 	memset(buf, 0, sizeof(buf));
 	buf[0] = waddr;
 	buf[1] = bdata;
-	CDBG("i2c_write_b addr = 0x%x, val = 0x%x\n", waddr, bdata);
-	rc = s5k4e1_af_i2c_txdata(s5k4e1_af_client->addr << 1, buf, 2);
+#ifdef CONFIG_ARCH_MSM7X27A
+	saddr = s5k4e1_af_client->addr;
+#else
+	saddr = (s5k4e1_af_client->addr) << 1;
+#endif
+	rc = s5k4e1_i2c_txdata(saddr, buf, 2);
 	if (rc < 0) {
 		pr_err("i2c_write_b failed, addr = 0x%x, val = 0x%x!\n",
 				waddr, bdata);
@@ -330,6 +320,7 @@ static int32_t s5k4e1_write_exp_gain(uint16_t gain, uint32_t line)
 	int32_t rc = 0;
 	static uint32_t fl_lines;
 
+	CDBG("---------------s5k4e1_write_exp_gain : gain = %d line = %d \n", gain, line);
 	if (gain > max_legal_gain) {
 		pr_debug("Max legal gain Line:%d\n", __LINE__);
 		gain = max_legal_gain;
@@ -338,8 +329,9 @@ static int32_t s5k4e1_write_exp_gain(uint16_t gain, uint32_t line)
 	s5k4e1_i2c_write_b_sensor(0x0204, s5k4e1_byte(gain, MSB));
 	s5k4e1_i2c_write_b_sensor(0x0205, s5k4e1_byte(gain, LSB));
 
+	/* Modi write exposure lines */
 	if (line > (prev_frame_length_lines - 4)) {
-		fl_lines = line+4;
+		fl_lines = line;
 		s5k4e1_group_hold_on();
 		s5k4e1_i2c_write_b_sensor(0x0340, s5k4e1_byte(fl_lines, MSB));
 		s5k4e1_i2c_write_b_sensor(0x0341, s5k4e1_byte(fl_lines, LSB));
@@ -347,8 +339,8 @@ static int32_t s5k4e1_write_exp_gain(uint16_t gain, uint32_t line)
 		s5k4e1_i2c_write_b_sensor(0x0202, s5k4e1_byte(line, MSB));
 		s5k4e1_i2c_write_b_sensor(0x0203, s5k4e1_byte(line, LSB));
 		s5k4e1_group_hold_off();
-	} else if (line < (fl_lines - 4)) {
-		fl_lines = line+4;
+	} else if (line < (prev_frame_length_lines - 4)) {
+		fl_lines = line;
 		if (fl_lines < prev_frame_length_lines)
 			fl_lines = prev_frame_length_lines;
 
@@ -370,6 +362,57 @@ static int32_t s5k4e1_write_exp_gain(uint16_t gain, uint32_t line)
 	return rc;
 }
 
+
+static int32_t s5k4e1_set_pict_exp_gain(uint16_t gain, uint32_t line)
+{
+	uint16_t max_legal_gain = 0x0200;
+	uint32_t ll_pck, fl_lines;
+	int32_t rc = 0;
+	uint8_t gain_msb, gain_lsb;
+	uint8_t intg_time_msb, intg_time_lsb;
+	uint8_t ll_pck_msb, ll_pck_lsb;
+
+	if (gain > max_legal_gain) {
+		pr_debug("Max legal gain Line:%d\n", __LINE__);
+		gain = max_legal_gain;
+	}
+	
+
+	fl_lines = snap_frame_length_lines;
+	ll_pck = snap_line_length_pck;
+	CDBG("+++++s5k4e1_write_exp_gain : gain = %d line = %d  #####fl_lines = %d, ll_pck = %d\n", gain, line, fl_lines, ll_pck);
+
+	if (line > (fl_lines -12))
+	{
+		fl_lines = line +12;
+	}
+
+
+	gain_msb = (uint8_t) ((gain & 0xFF00) >> 8);
+	gain_lsb = (uint8_t) (gain & 0x00FF);
+
+	intg_time_msb = (uint8_t) ((line & 0xFF00) >> 8);
+	intg_time_lsb = (uint8_t) (line & 0x00FF);
+
+	ll_pck_msb = (uint8_t) ((fl_lines & 0xFF00) >> 8);
+	ll_pck_lsb = (uint8_t) (fl_lines & 0x00FF);
+
+	s5k4e1_group_hold_on();
+	s5k4e1_i2c_write_b_sensor(0x0204, gain_msb);
+	s5k4e1_i2c_write_b_sensor(0x0205, gain_lsb);
+
+	s5k4e1_i2c_write_b_sensor(0x0340, ll_pck_msb);
+	s5k4e1_i2c_write_b_sensor(0x0341, ll_pck_lsb);
+
+	/* Coarse Integration Time */
+	s5k4e1_i2c_write_b_sensor(0x0202, intg_time_msb);
+	s5k4e1_i2c_write_b_sensor(0x0203, intg_time_lsb);
+	s5k4e1_group_hold_off();
+
+	return rc;
+}
+
+/*
 static int32_t s5k4e1_set_pict_exp_gain(uint16_t gain, uint32_t line)
 {
 	uint16_t max_legal_gain = 0x0200;
@@ -385,11 +428,13 @@ static int32_t s5k4e1_set_pict_exp_gain(uint16_t gain, uint32_t line)
 		pr_debug("Max legal gain Line:%d\n", __LINE__);
 		gain = max_legal_gain;
 	}
+	
+	CDBG("+++++s5k4e1_write_exp_gain : gain = %d line = %d  #####\n", gain, line);
 
-	pr_debug("s5k4e1_write_exp_gain : gain = %d line = %d\n", gain, line);
 	line = (uint32_t) (line * s5k4e1_ctrl->pict_fps_divider);
 	fl_lines = snap_frame_length_lines;
 	ll_pck = snap_line_length_pck;
+	CDBG("+++++s5k4e1_write_exp_gain : gain = %d line = %d  #####fl_lines = %d, ll_pck = %d\n", gain, line, fl_lines, ll_pck);
 
 	if (fl_lines < (line / 0x400))
 		ll_ratio = (line / (fl_lines - 4));
@@ -401,6 +446,7 @@ static int32_t s5k4e1_set_pict_exp_gain(uint16_t gain, uint32_t line)
 	if (ll_pck < min_ll_pck)
 		ll_pck = min_ll_pck;
 
+	CDBG("------s5k4e1_write_exp_gain : gain = %d line = %d  #####fl_lines = %d, ll_pck = %d\n", gain, line, fl_lines, ll_pck);
 	gain_msb = (uint8_t) ((gain & 0xFF00) >> 8);
 	gain_lsb = (uint8_t) (gain & 0x00FF);
 
@@ -411,20 +457,20 @@ static int32_t s5k4e1_set_pict_exp_gain(uint16_t gain, uint32_t line)
 	ll_pck_lsb = (uint8_t) (ll_pck & 0x00FF);
 
 	s5k4e1_group_hold_on();
-	s5k4e1_i2c_write_b_sensor(0x0204, gain_msb); /* Analogue Gain */
+	s5k4e1_i2c_write_b_sensor(0x0204, gain_msb);
 	s5k4e1_i2c_write_b_sensor(0x0205, gain_lsb);
 
 	s5k4e1_i2c_write_b_sensor(0x0342, ll_pck_msb);
 	s5k4e1_i2c_write_b_sensor(0x0343, ll_pck_lsb);
 
-	/* Coarse Integration Time */
+
 	s5k4e1_i2c_write_b_sensor(0x0202, intg_time_msb);
 	s5k4e1_i2c_write_b_sensor(0x0203, intg_time_lsb);
 	s5k4e1_group_hold_off();
 
 	return rc;
 }
-
+*/
 static int32_t s5k4e1_move_focus(int direction,
 		int32_t num_steps)
 {
@@ -499,25 +545,38 @@ static int32_t s5k4e1_sensor_setting(int update_type, int rt)
 
 	if (update_type == REG_INIT) {
 		s5k4e1_reset_sensor();
+
+			
+		s5k4e1_i2c_write_b_table(s5k4e1_regs.rec_settings,
+					s5k4e1_regs.rec_size);
+
 		s5k4e1_i2c_write_b_table(s5k4e1_regs.reg_mipi,
 				s5k4e1_regs.reg_mipi_size);
-		s5k4e1_i2c_write_b_table(s5k4e1_regs.rec_settings,
-				s5k4e1_regs.rec_size);
+		
 		s5k4e1_i2c_write_b_table(s5k4e1_regs.reg_pll_p,
 				s5k4e1_regs.reg_pll_p_size);
+		s5k4e1_i2c_write_b_table(s5k4e1_regs.reg_lc,
+				s5k4e1_regs.reg_lc_size);
 		CSI_CONFIG = 0;
 	} else if (update_type == UPDATE_PERIODIC) {
 		if (rt == RES_PREVIEW)
+		{
+
 			s5k4e1_i2c_write_b_table(s5k4e1_regs.reg_prev,
-					s5k4e1_regs.reg_prev_size);
+				s5k4e1_regs.reg_prev_size);		
+		}
 		else
+		{
+
 			s5k4e1_i2c_write_b_table(s5k4e1_regs.reg_snap,
-					s5k4e1_regs.reg_snap_size);
+				s5k4e1_regs.reg_snap_size);		
+
+		}
 		msleep(20);
 		if (!CSI_CONFIG) {
 			msm_camio_vfe_clk_rate_set(192000000);
 			s5k4e1_csi_params.data_format = CSI_10BIT;
-			s5k4e1_csi_params.lane_cnt = 1;
+			s5k4e1_csi_params.lane_cnt = 2;
 			s5k4e1_csi_params.lane_assign = 0xe4;
 			s5k4e1_csi_params.dpcm_scheme = 0;
 			s5k4e1_csi_params.settle_cnt = 24;
@@ -625,7 +684,14 @@ static int32_t s5k4e1_power_down(void)
 static int s5k4e1_probe_init_done(const struct msm_camera_sensor_info *data)
 {
 	CDBG("probe done\n");
-	gpio_free(data->sensor_reset);
+	gpio_direction_output(data->sensor_reset, 0);
+    gpio_free(data->sensor_reset);
+    gpio_free(data->sensor_pwd);
+	/*disable the power*/
+	if (data->vreg_disable_func)
+	{
+		data->vreg_disable_func(0);
+	}
 	return 0;
 }
 
@@ -639,6 +705,12 @@ static int s5k4e1_probe_init_sensor(const struct msm_camera_sensor_info *data)
 
 	CDBG("%s: %d\n", __func__, __LINE__);
 	CDBG(" s5k4e1_probe_init_sensor is called\n");
+	/*enable the power*/
+	if (data->vreg_enable_func)
+	{
+		data->vreg_enable_func(1);
+	}
+	mdelay(5);
 
 	rc = gpio_request(data->sensor_reset, "s5k4e1");
 	CDBG(" s5k4e1_probe_init_sensor\n");
@@ -674,7 +746,6 @@ static int s5k4e1_probe_init_sensor(const struct msm_camera_sensor_info *data)
 
 init_probe_fail:
 	CDBG(" s5k4e1_probe_init_sensor fails\n");
-	gpio_set_value_cansleep(data->sensor_reset, 0);
 	s5k4e1_probe_init_done(data);
 	if (data->vcm_enable) {
 		int ret = gpio_request(data->vcm_pwd, "s5k4e1_af");
@@ -741,8 +812,6 @@ int s5k4e1_sensor_open_init(const struct msm_camera_sensor_info *data)
 
 	/* enable AF actuator */
 	if (s5k4e1_ctrl->sensordata->vcm_enable) {
-		CDBG("enable AF actuator, gpio = %d\n",
-			 s5k4e1_ctrl->sensordata->vcm_pwd);
 		rc = gpio_request(s5k4e1_ctrl->sensordata->vcm_pwd,
 						"s5k4e1_af");
 		if (!rc)
@@ -753,6 +822,8 @@ int s5k4e1_sensor_open_init(const struct msm_camera_sensor_info *data)
 			pr_err("s5k4e1_ctrl gpio request failed!\n");
 			goto init_fail;
 		}
+
+		CDBG("af vcm_pwd has been set to high!");
 		msleep(20);
 		rc = s5k4e1_set_default_focus(0);
 		if (rc < 0) {
@@ -867,15 +938,6 @@ static int __devexit s5k4e1_remove(struct i2c_client *client)
 	free_irq(client->irq, sensorw);
 	s5k4e1_client = NULL;
 	kfree(sensorw);
-	return 0;
-}
-
-static int __devexit s5k4e1_af_remove(struct i2c_client *client)
-{
-	struct s5k4e1_work_t *s5k4e1_af = i2c_get_clientdata(client);
-	free_irq(client->irq, s5k4e1_af);
-	s5k4e1_af_client = NULL;
-	kfree(s5k4e1_af);
 	return 0;
 }
 
@@ -1021,6 +1083,11 @@ static int s5k4e1_sensor_release(void)
 		gpio_set_value_cansleep(s5k4e1_ctrl->sensordata->vcm_pwd, 0);
 		gpio_free(s5k4e1_ctrl->sensordata->vcm_pwd);
 	}
+	/*disable the power*/
+	if (s5k4e1_ctrl->sensordata->vreg_disable_func)
+	{
+		s5k4e1_ctrl->sensordata->vreg_disable_func(0);
+	}
 	kfree(s5k4e1_ctrl);
 	s5k4e1_ctrl = NULL;
 	CDBG("s5k4e1_release completed\n");
@@ -1038,7 +1105,7 @@ static int s5k4e1_sensor_probe(const struct msm_camera_sensor_info *info,
 	if (rc < 0 || s5k4e1_client == NULL) {
 		rc = -ENOTSUPP;
 		CDBG("I2C add driver failed");
-		goto probe_fail_1;
+		goto probe_fail;
 	}
 
 	rc = i2c_add_driver(&s5k4e1_af_i2c_driver);
@@ -1057,26 +1124,39 @@ static int s5k4e1_sensor_probe(const struct msm_camera_sensor_info *info,
 	s->s_init = s5k4e1_sensor_open_init;
 	s->s_release = s5k4e1_sensor_release;
 	s->s_config  = s5k4e1_sensor_config;
+#ifdef CONFIG_ARCH_MSM7X27A
 	s->s_mount_angle = info->sensor_platform_info->mount_angle;
+#else
+	s->s_mount_angle = 0 ;
+#endif
 	gpio_set_value_cansleep(info->sensor_reset, 0);
 	s5k4e1_probe_init_done(info);
 	/* Keep vcm_pwd to OUT Low */
-	if (info->vcm_enable) {
+	if (info->vcm_enable) { // info->vcm_enable) {
 		rc = gpio_request(info->vcm_pwd, "s5k4e1_af");
 		if (!rc) {
+			CDBG("probe af gpio ");
 			gpio_direction_output(info->vcm_pwd, 0);
 			msleep(20);
 			gpio_free(info->vcm_pwd);
 		} else
-			return rc;
+		{
+			CDBG("af gpio request failed !!!!");
+		}
 	}
+
+#ifdef CONFIG_HUAWEI_HW_DEV_DCT
+    /* detect current device successful, set the flag as present */
+    set_hw_dev_flag(DEV_I2C_CAMERA_MAIN);
+#endif
+    
 	return rc;
 
 probe_fail_3:
 	i2c_del_driver(&s5k4e1_af_i2c_driver);
 probe_fail_2:
 	i2c_del_driver(&s5k4e1_i2c_driver);
-probe_fail_1:
+probe_fail:
 	CDBG("s5k4e1_sensor_probe: SENSOR PROBE FAILS!\n");
 	return rc;
 }

@@ -269,8 +269,11 @@ struct mmc_card {
 #define MMC_QUIRK_LONG_READ_TIME (1<<9)		/* Data read time > CSD says */
 						/* byte mode */
 #define MMC_QUIRK_INAND_DATA_TIMEOUT  (1<<8)    /* For incorrect data timeout */
-	unsigned int    	poweroff_notify_state;	/* eMMC4.5 notify
-							   feature */
+#ifdef CONFIG_HUAWEI_KERNEL 
+#define MMC_QUIRK_SAMSUNG_SMART (1<<10)          /* Samsung SMART is available */ 
+#endif
+
+    unsigned int    poweroff_notify_state;	/* eMMC4.5 notify feature */
 #define MMC_NO_POWER_NOTIFICATION	0
 #define MMC_POWERED_ON			1
 
@@ -538,5 +541,7 @@ extern void mmc_fixup_device(struct mmc_card *card,
 extern struct mmc_wr_pack_stats *mmc_blk_get_packed_statistics(
 			struct mmc_card *card);
 extern void mmc_blk_init_packed_statistics(struct mmc_card *card);
-
-#endif /* LINUX_MMC_CARD_H */
+#ifdef CONFIG_HUAWEI_KERNEL 
+extern ssize_t mmc_samsung_smart_handle(struct mmc_card *card, char *buf); 
+#endif
+#endif

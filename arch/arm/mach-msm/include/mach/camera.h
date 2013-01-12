@@ -468,6 +468,15 @@ static inline int msm_flash_ctrl(
 }
 #endif
 
+/*Add function for new flash tps61310*/
+#ifdef CONFIG_HUAWEI_FEATURE_TPS61310
+int tps61310_set_flash(unsigned led_state);
+#else
+static int tps61310_set_flash(unsigned led_state)
+{
+	return -ENOTSUPP;
+}
+#endif
 
 
 void msm_camvfe_init(void);

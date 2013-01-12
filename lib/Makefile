@@ -122,6 +122,7 @@ obj-$(CONFIG_MPILIB) += mpi/
 obj-$(CONFIG_SIGNATURE) += digsig.o
 
 obj-$(CONFIG_CLZ_TAB) += clz_tab.o
+obj-$(CONFIG_DEVICE_CHECK) += dev_check.o
 
 hostprogs-y	:= gen_crc32table
 clean-files	:= crc32table.h

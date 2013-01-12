@@ -21,8 +21,12 @@ obj-$(CONFIG_INPUT_MOUSE)	+= mouse/
 obj-$(CONFIG_INPUT_JOYSTICK)	+= joystick/
 obj-$(CONFIG_INPUT_TABLET)	+= tablet/
 obj-$(CONFIG_INPUT_TOUCHSCREEN)	+= touchscreen/
+#/* <lKF25964-001 liujinggang 20100413 begin */
+obj-$(CONFIG_HUAWEI_FEATURE_INPUT_ACCELEROMETER)	+= accelerometer/
+#/* <lKF25964-001 liujinggang 20100413 begin */
 obj-$(CONFIG_INPUT_MISC)	+= misc/
 
 obj-$(CONFIG_INPUT_APMPOWER)	+= apm-power.o
 obj-$(CONFIG_INPUT_OF_MATRIX_KEYMAP) += of_keymap.o
 obj-$(CONFIG_INPUT_KEYRESET)	+= keyreset.o
+obj-y += sensor_info.o

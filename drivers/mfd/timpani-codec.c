@@ -41,6 +41,11 @@
 		TIMPANI_CDC_ST_MIXING_TX2_R_M)
 #define TIMPANI_CDC_ST_MIXING_TX2_ENABLE ((1 << TIMPANI_CDC_ST_MIXING_TX2_L_S)\
 		| (1 << TIMPANI_CDC_ST_MIXING_TX2_R_S))
+#ifdef CONFIG_HUAWEI_KERNEL
+#define TIMPANI_CDC_ST_MIXING_TX1_MIC1_MASK (TIMPANI_CDC_ST_MIXING_TX1_L_M |\
+		TIMPANI_CDC_ST_MIXING_TX1_R_M)
+#define TIMPANI_CDC_ST_MIXING_TX1_MIC1_ENABLE ((1 << TIMPANI_CDC_ST_MIXING_TX1_L_S))
+#endif
 
 enum refcnt {
 	DEC = 0,
@@ -2721,6 +2726,7 @@ static struct adie_codec_state adie_codec;
  * are not skipped.
  */
 
+#ifndef CONFIG_HUAWEI_KERNEL
 static bool timpani_register_is_cacheable(u8 reg)
 {
 	switch (reg) {
@@ -2801,6 +2807,22 @@ error:
 	return rc;
 }
 
+#else
+static int adie_codec_write(u8 reg, u8 mask, u8 val)
+{
+	int rc;
+
+	rc = marimba_write_bit_mask(adie_codec.pdrv_ptr, reg,  &val, 1, mask);
+	if (IS_ERR_VALUE(rc)) {
+		pr_err("%s: fail to write reg %x\n", __func__, reg);
+		return -EIO;
+	}
+
+	pr_debug("%s: write reg %x val %x\n", __func__, reg, val);
+
+	return 0;
+}
+#endif
 
 static int reg_in_use(u8 reg_ref, u8 path_type)
 {
@@ -2935,11 +2957,17 @@ int timpani_adie_codec_enable_sidetone(struct adie_codec_path *rx_path_ptr,
 	if (enable) {
 		rc = adie_codec_write(TIMPANI_A_CDC_RX1_CTL,
 			TIMPANI_RX1_ST_MASK, TIMPANI_RX1_ST_ENABLE);
-
+#ifdef CONFIG_HUAWEI_KERNEL
+		if (rx_path_ptr->reg_owner == RA_OWNER_PATH_RX1)
+			adie_codec_write(TIMPANI_A_CDC_ST_MIXING,
+				TIMPANI_CDC_ST_MIXING_TX1_MIC1_MASK,
+				TIMPANI_CDC_ST_MIXING_TX1_MIC1_ENABLE);
+#else
 		if (rx_path_ptr->reg_owner == RA_OWNER_PATH_RX1)
 			adie_codec_write(TIMPANI_A_CDC_ST_MIXING,
 				TIMPANI_CDC_ST_MIXING_TX1_MASK,
 				TIMPANI_CDC_ST_MIXING_TX1_ENABLE);
+#endif
 		else if (rx_path_ptr->reg_owner == RA_OWNER_PATH_RX2)
 			adie_codec_write(TIMPANI_A_CDC_ST_MIXING,
 				TIMPANI_CDC_ST_MIXING_TX2_MASK,

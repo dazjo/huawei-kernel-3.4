@@ -17,6 +17,50 @@
 
 #include "internals.h"
 
+/* move from linux/irq.h */
+/* merge qcom DEBUG_CODE for RPC crashes */
+#ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+#include <linux/kernel.h>  
+#include <mach/msm_iomap.h>  
+#include <linux/io.h>
+
+#if defined(CONFIG_ARCH_MSM7X30) || defined(CONFIG_ARCH_MSM8X60) \
+	|| defined(CONFIG_ARCH_FSM9XXX)
+#define TIMESTAMP_ADDR_TMP (MSM_TMR_BASE + 0x08)
+#elif defined(CONFIG_ARCH_APQ8064) || defined(CONFIG_ARCH_MSM7X01A) || \
+	defined(CONFIG_ARCH_MSM7x25) || defined(CONFIG_ARCH_MSM7X27) || \
+	defined(CONFIG_ARCH_MSM7X27A) || defined(CONFIG_ARCH_MSM8960) || \
+	defined(CONFIG_ARCH_MSM9615) || defined(CONFIG_ARCH_QSD8X50)
+#define TIMESTAMP_ADDR_TMP (MSM_TMR_BASE + 0x04)
+#endif
+
+static inline unsigned int read_timestamp(void)
+{
+	unsigned int tick = 0;
+	unsigned int count = 0;
+
+	/* no barriers necessary as the read value is a dependency for the
+	 * comparison operation so the processor shouldn't be able to
+	 * reorder things
+	 */
+	do {
+		tick = __raw_readl(TIMESTAMP_ADDR_TMP);
+		count++;
+	} while (tick != __raw_readl(TIMESTAMP_ADDR_TMP) && count < 5);
+
+	return tick;
+}
+
+struct irqs_timestamp {  
+	unsigned int irq;  
+	uint32_t  ts; 
+	unsigned int state; 
+};  
+
+static struct irqs_timestamp irq_ts[128];  
+static int irq_idx = 0;  
+#endif
+
 /*
  * lockdep: we want to handle all irq_desc locks as a single lock-class:
  */
@@ -309,9 +353,26 @@ int generic_handle_irq(unsigned int irq)
 {
 	struct irq_desc *desc = irq_to_desc(irq);
 
-	if (!desc)
+	/* merge qcom DEBUG_CODE for RPC crashes */
+#ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+	uint32_t  timetick=0; 
+	timetick = read_timestamp();  
+	irq_ts[irq_idx].irq=irq;
+	irq_ts[irq_idx].ts=timetick; 
+	irq_ts[irq_idx].state=1; 
+	/*end of HUAWEI*/
+#endif
+
+    if (!desc)
 		return -EINVAL;
-	generic_handle_irq_desc(irq, desc);
+    generic_handle_irq_desc(irq, desc);
+
+#ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+    /*HUAWEI debug */
+    irq_ts[irq_idx].state=3;
+    irq_idx = (irq_idx + 1)%128; 
+#endif
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(generic_handle_irq);

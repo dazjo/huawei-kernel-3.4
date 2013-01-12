@@ -26,4 +26,9 @@ int vreg_enable(struct vreg *vreg);
 int vreg_disable(struct vreg *vreg);
 int vreg_set_level(struct vreg *vreg, unsigned mv);
 
+#ifdef CONFIG_HUAWEI_KERNEL 
+#define VREG_GP4_VOLTAGE_VALUE_2700	    2700    /* GP4 voltage for normal version */
+#define VREG_GP4_VOLTAGE_VALUE_2800	    2800    /* GP4 voltage for 8820 */
+#endif
+
 #endif

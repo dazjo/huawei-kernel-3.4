@@ -92,7 +92,8 @@ void save_stack_trace_tsk(struct task_struct *tsk, struct stack_trace *trace)
 	data.skip = trace->skip;
 
 	if (tsk != current) {
-#ifdef CONFIG_SMP
+		/* enable call stack in smp arch */
+#if defined(CONFIG_SMP) && !defined(CONFIG_HUAWEI_KERNEL)
 		/*
 		 * What guarantees do we have here that 'tsk' is not
 		 * running on another CPU?  For now, ignore it as we

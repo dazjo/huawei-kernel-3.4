@@ -575,4 +575,12 @@ config GPIO_QPNP_PIN_DEBUG
 	help
 	  Say 'y' here to include debug support for the Qualcomm
 	  QPNP gpio driver.
+	  
+config GPIO_SLEEP
+	tristate "GPIO sleep driver"
+	depends on SERIAL_MSM_HS
+	default n
+	help
+	  gpio sleep driver.
+	  This driver provides support for gpio controled sleep mechanism with MTK.
 endif

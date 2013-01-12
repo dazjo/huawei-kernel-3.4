@@ -1,0 +1,10 @@
+#
+# gyroscope driver configuration
+#
+
+config HUAWEI_FEATURE_GYROSCOPE_L3G4200DH
+	tristate "L3G4200DH"
+	depends on HUAWEI_KERNEL	
+	default n 
+	help
+	  Say Y here if you have the ST L3G4200DH gyroscope.

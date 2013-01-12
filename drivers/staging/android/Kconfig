@@ -80,4 +80,9 @@ config ANDROID_INTF_ALARM_DEV
 
 endif # if ANDROID
 
+config HUAWEI_FEATURE_NV_LOG_CONTROL
+	tristate "Android LOG"
+	depends on HUAWEI_KERNEL
+	default n
+
 endmenu

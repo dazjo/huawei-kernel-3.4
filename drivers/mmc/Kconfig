@@ -27,6 +27,9 @@ config MMC_PERF_PROFILING
 	  If you say Y here, support will be added for collecting
 	  performance numbers at the MMC Queue and Host layers.
 
+config HUAWEI_WIFI_SDCC
+	bool "Wireless extensions sdcc files"
+	default n
 if MMC
 
 source "drivers/mmc/core/Kconfig"

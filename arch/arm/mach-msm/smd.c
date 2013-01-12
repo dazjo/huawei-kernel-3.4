@@ -43,6 +43,9 @@
 #include <mach/proc_comm.h>
 #include <asm/cacheflush.h>
 
+#ifdef CONFIG_HUAWEI_KERNEL  
+#include <linux/sched.h> 
+#endif
 #include "smd_private.h"
 #include "modem_notifier.h"
 
@@ -1278,6 +1281,11 @@ static void handle_smd_irq(struct list_head *list, void (*notify)(void))
 					ch->read_avail(ch),
 					ch->fifo_size - ch->write_avail(ch));
 			ch->notify(ch->priv, SMD_EVENT_DATA);
+            #ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+            /* fix a bug related to compile failed */
+			printk(KERN_ERR "%s: ch %s --> recv_stat %d, last_stat %d, ch_flags %d\n",__func__, 
+			                   ch->name, ch->half_ch->get_fSTATE(ch->recv), ch->last_state, ch_flags);
+            #endif
 		}
 		if (ch_flags & 0x4 && !state_change) {
 			SMx_POWER_INFO("SMD ch%d '%s' State update\n",
@@ -1291,10 +1299,16 @@ static void handle_smd_irq(struct list_head *list, void (*notify)(void))
 
 static irqreturn_t smd_modem_irq_handler(int irq, void *data)
 {
+    #ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+	printk(KERN_ERR "++ %s: irq %d\n", __func__,irq); 
+    #endif
 	SMx_POWER_INFO("SMD Int Modem->Apps\n");
 	++interrupt_stats[SMD_MODEM].smd_in_count;
 	handle_smd_irq(&smd_ch_list_modem, notify_modem_smd);
 	handle_smd_irq_closing_list();
+    #ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+	printk(KERN_ERR "-- %s: irq %d\n", __func__,irq); 
+    #endif
 	return IRQ_HANDLED;
 }
 
@@ -2116,15 +2130,34 @@ EXPORT_SYMBOL(smd_write_avail);
 
 void smd_enable_read_intr(smd_channel_t *ch)
 {
+    #ifndef CONFIG_HUAWEI_RPC_CRASH_DEBUG
 	if (ch)
 		ch->half_ch->set_fBLOCKREADINTR(ch->send, 0);
+    #else
+	if (ch)
+	{
+		ch->half_ch->set_fBLOCKREADINTR(ch->send, 0); 
+		printk("%s:channel name:%s \n", __func__,ch->name); 
+	}
+    #endif
 }
 EXPORT_SYMBOL(smd_enable_read_intr);
 
 void smd_disable_read_intr(smd_channel_t *ch)
 {
+/* fix a bug related to the RPC logs
+ * we need this logs when we open the CONFIG option
+ */
+    #ifndef CONFIG_HUAWEI_RPC_CRASH_DEBUG
 	if (ch)
 		ch->half_ch->set_fBLOCKREADINTR(ch->send, 1);
+    #else
+	if (ch)
+	{
+		ch->half_ch->set_fBLOCKREADINTR(ch->send, 1);
+		printk("%s:channel name:%s \n", __func__,ch->name); 
+	}	
+    #endif
 }
 EXPORT_SYMBOL(smd_disable_read_intr);
 
@@ -2631,6 +2664,11 @@ static irqreturn_t smsm_irq_handler(int irq, void *data)
 			modem_queue_start_reset_notify();
 
 		} else if (modm & SMSM_RESET) {
+#ifdef CONFIG_HUAWEI_KERNEL              
+            /* merge rpc debug code to analyse rpc crash */
+			show_state_filter(TASK_UNINTERRUPTIBLE);
+#endif             
+           
 			pr_err("\nSMSM: Modem SMSM state changed to SMSM_RESET.");
 			if (!disable_smsm_reset_handshake) {
 				apps |= SMSM_RESET;

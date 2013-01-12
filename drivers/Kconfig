@@ -128,7 +128,11 @@ source "drivers/xen/Kconfig"
 
 source "drivers/staging/Kconfig"
 
+source "drivers/nfc/Kconfig"
+
 source "drivers/platform/Kconfig"
+source "drivers/devdetect/Kconfig"
+
 
 source "drivers/clk/Kconfig"
 

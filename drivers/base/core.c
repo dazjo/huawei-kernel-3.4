@@ -29,6 +29,14 @@
 #include "base.h"
 #include "power/power.h"
 
+#ifdef CONFIG_HUAWEI_KERNEL_DEBUG
+#define DBG(format, arg...) do { \
+    printk(KERN_DEBUG "%s: " format "\n" , __func__ , ## arg); \
+} while (0)
+#else
+#define DBG(format, arg...) do { } while (0)
+#endif
+
 #ifdef CONFIG_SYSFS_DEPRECATED
 #ifdef CONFIG_SYSFS_DEPRECATED_V2
 long sysfs_deprecated = 1;
@@ -1803,7 +1811,12 @@ void device_shutdown(void)
 {
 	struct device *dev;
 
+    DBG("begin");
+
 	spin_lock(&devices_kset->list_lock);
+
+    DBG("has get the spin_lock");
+
 	/*
 	 * Walk the devices list backward, shutting down each in turn.
 	 * Beware that device unplug events may also start pulling
@@ -1812,6 +1825,9 @@ void device_shutdown(void)
 	while (!list_empty(&devices_kset->list)) {
 		dev = list_entry(devices_kset->list.prev, struct device,
 				kobj.entry);
+
+        DBG("dev name = %s", dev->kobj.name);
+        
 		get_device(dev);
 		/*
 		 * Make sure the device is off the kset list, in the
@@ -1836,7 +1852,12 @@ void device_shutdown(void)
 		spin_lock(&devices_kset->list_lock);
 	}
 	spin_unlock(&devices_kset->list_lock);
+
+    DBG("before async_synchronize_full()");
+    
 	async_synchronize_full();
+
+    DBG("end");
 }
 
 /*

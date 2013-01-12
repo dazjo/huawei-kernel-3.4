@@ -47,6 +47,14 @@
 extern int register_reboot_notifier(struct notifier_block *);
 extern int unregister_reboot_notifier(struct notifier_block *);
 
+#ifdef CONFIG_SRECORDER_MSM
+#ifdef CONFIG_SRECORDER_POWERCOLLAPS
+#ifndef CONFIG_KPROBES
+extern int register_emergency_reboot_notifier(struct notifier_block *);
+extern int unregister_emergency_reboot_notifier(struct notifier_block *);
+#endif
+#endif /* CONFIG_SRECORDER_POWERCOLLAPS */
+#endif /* CONFIG_SRECORDER_MSM */
 
 /*
  * Architecture-specific implementations of sys_reboot commands.

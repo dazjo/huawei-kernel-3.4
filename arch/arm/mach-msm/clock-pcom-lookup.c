@@ -321,13 +321,30 @@ static struct clk_lookup msm_cmn_clk_7625a_7627a[] __initdata = {
 	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-0010"),
 	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-0078"),
 	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-006c"),
+	/*the cam_clk is for s5k4e1, whose I2C addr is 0x6E*/
+	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-006e"),
+	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-007a"), //mclk for mt9v113
+	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-0042"), //mclk for gc0313
+	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-0037"), //mclk for bf3905
 	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-000d"),
+	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-005a"),
+    CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-006f"),//mclck for s5k3h2
+	CLK_LOOKUP("cam_clk",		cam_m_clk.c,	"0-0040"),//mclck for hi542
 	CLK_LOOKUP("csi_clk",		csi0_clk.c,	"msm_camera_ov9726.0"),
 	CLK_LOOKUP("csi_pclk",		csi0_p_clk.c,	"msm_camera_ov9726.0"),
 	CLK_LOOKUP("csi_vfe_clk",	csi0_vfe_clk.c,	"msm_camera_ov9726.0"),
 	CLK_LOOKUP("csi_clk",		csi0_clk.c,	"msm_camera_ov7692.0"),
 	CLK_LOOKUP("csi_pclk",		csi0_p_clk.c,	"msm_camera_ov7692.0"),
 	CLK_LOOKUP("csi_vfe_clk",	csi0_vfe_clk.c,	"msm_camera_ov7692.0"),
+#ifdef CONFIG_HUAWEI_CAMERA
+	/* If disable these three sentences, the camera will not work,for not
+	 * receiving any frames from camera driver.
+	   If add a new front mipi camera,we can add three sentences as mt9v113
+	 */
+	CLK_LOOKUP("csi_clk",		csi0_clk.c,	"msm_camera_mt9v113.0"),
+	CLK_LOOKUP("csi_pclk",		csi0_p_clk.c,	"msm_camera_mt9v113.0"),
+	CLK_LOOKUP("csi_vfe_clk",	csi0_vfe_clk.c,	"msm_camera_mt9v113.0"),
+#endif 
 	CLK_LOOKUP("csi_clk",		csi1_clk.c,	NULL),
 	CLK_LOOKUP("csi_pclk",		csi1_p_clk.c,	NULL),
 	CLK_LOOKUP("csi_vfe_clk",	csi1_vfe_clk.c,	NULL),
@@ -379,7 +396,12 @@ static struct clk_lookup msm_cmn_clk_7625a_7627a[] __initdata = {
 	CLK_LOOKUP("core_clk",		uart1_clk.c,	"msm_serial.0"),
 	CLK_LOOKUP("core_clk",		uart2_clk.c,	"msm_serial.1"),
 	CLK_LOOKUP("core_clk",		uart1dm_clk.c,	"msm_serial_hs.0"),
+/* uart2dm should use msm_serial_hs clock instead of msm_serial_hsl clock */
+#ifndef CONFIG_HUAWEI_KERNEL
 	CLK_LOOKUP("core_clk",		uart2dm_clk.c,	"msm_serial_hsl.0"),
+#else
+	CLK_LOOKUP("core_clk",		uart2dm_clk.c,	"msm_serial_hs.1"),
+#endif
 	CLK_LOOKUP("core_clk",		usb_hs_core_clk.c, "msm_otg"),
 	CLK_LOOKUP("alt_core_clk",	usb_hs_clk.c,	"msm_otg"),
 	CLK_LOOKUP("iface_clk",		usb_hs_p_clk.c,	"msm_otg"),

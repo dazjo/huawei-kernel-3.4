@@ -165,7 +165,12 @@ int32_t msm_actuator_write_focus(
 	uint16_t damping_code_step = 0;
 	uint16_t wait_time = 0;
 
-	damping_code_step = damping_params->damping_step;
+	/* As the damping_step is very large, so we won't be into the loop behind
+	* which result the actuator move the destination by once time. Bigger 
+	* movement, bigger noise. So we change it to step size in current region 
+	* to make this movement more slightly .
+	*/
+	damping_code_step = a_ctrl->region_params[a_ctrl->curr_region_index].code_per_step;
 	wait_time = damping_params->damping_delay;
 
 	/* Write code based on damping_code_step in a loop */
@@ -186,6 +191,8 @@ int32_t msm_actuator_write_focus(
 		}
 		curr_lens_pos = next_lens_pos;
 		usleep(wait_time);
+        if(0 == damping_code_step)
+            break;
 	}
 
 	if (curr_lens_pos != code_boundary) {
@@ -254,8 +261,7 @@ int32_t msm_actuator_move_focus(
 			target_step_pos = dest_step_pos;
 			target_lens_pos =
 				a_ctrl->step_position_table[target_step_pos];
-			if (curr_lens_pos == target_lens_pos)
-				return rc;
+			/*change from Qualcomm. delete some codes*/
 			rc = a_ctrl->func_tbl->
 				actuator_write_focus(
 					a_ctrl,
@@ -276,8 +282,7 @@ int32_t msm_actuator_move_focus(
 			target_step_pos = step_boundary;
 			target_lens_pos =
 				a_ctrl->step_position_table[target_step_pos];
-			if (curr_lens_pos == target_lens_pos)
-				return rc;
+			/*change from Qualcomm. delete some codes*/
 			rc = a_ctrl->func_tbl->
 				actuator_write_focus(
 					a_ctrl,

@@ -48,6 +48,10 @@
  * operations the card has to perform
  */
 #define MMC_BKOPS_MAX_TIMEOUT    (4 * 60 * 1000) /* max time to wait in ms */
+#ifndef CONFIG_HUAWEI_KERNEL
+#include <asm/mach-types.h>
+#define MSM_SDCARD_SCAN_CYCLE	20
+#endif
 
 static struct workqueue_struct *workqueue;
 
@@ -79,8 +83,14 @@ MODULE_PARM_DESC(
 /*
  * Internal function. Schedule delayed work in the MMC work queue.
  */
+/*we want mmc_schedule_delayed_work to run in source code of msm_sdcc*/
+#ifdef CONFIG_HUAWEI_KERNEL
+int mmc_schedule_delayed_work(struct delayed_work *work,
+				     unsigned long delay)
+#else
 static int mmc_schedule_delayed_work(struct delayed_work *work,
 				     unsigned long delay)
+#endif
 {
 	return queue_delayed_work(workqueue, work, delay);
 }
@@ -2233,8 +2243,23 @@ void mmc_rescan(struct work_struct *work)
 		wake_unlock(&host->detect_wake_lock);
 	if (host->caps & MMC_CAP_NEEDS_POLL) {
 		wake_lock(&host->detect_wake_lock);
-		mmc_schedule_delayed_work(&host->detect, HZ);
-	}
+/*set 20s scan cycle*/
+#ifndef CONFIG_HUAWEI_KERNEL
+        /*U8860-51 is set to interupt mode*/
+        if( (machine_is_msm8255_c8860()) 
+            || (machine_is_msm8255_u8860())
+            || (machine_is_msm8255_u8860_92())
+            || machine_is_msm8255_u8860_r()
+            || (machine_is_msm8255_u8860lp()))
+        {
+            mmc_schedule_delayed_work(&host->detect, MSM_SDCARD_SCAN_CYCLE*HZ);
+        }
+        else
+#endif
+        {
+            mmc_schedule_delayed_work(&host->detect, HZ);
+        }
+    }
 }
 
 void mmc_start_host(struct mmc_host *host)

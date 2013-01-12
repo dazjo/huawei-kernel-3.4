@@ -29,6 +29,30 @@
 
 #include <asm/ioctls.h>
 
+#ifdef CONFIG_HUAWEI_KERNEL
+#include <asm/sections.h>
+#endif
+/* for logcat nv control */
+#ifdef CONFIG_HUAWEI_KERNEL
+#include <mach/oem_rapi_client.h>
+/* del #include proc_comm.h code */
+
+#define LOG_CTL_INFO_ITEM	   60008/*modem nv item: NV_LOG_CTL_INFO_I*/
+#define USER_LOG_ON 1
+#define USER_LOG_OFF 0
+
+#if defined(CONFIG_HUAWEI_KERNEL)
+/* add log switch, control logmian ect logs can write in or not */
+static atomic_t log_switch = ATOMIC_INIT(USER_LOG_OFF);
+static int minor_of_exception = 0;
+static int minor_of_power = 0;
+#endif
+struct log_ctl{
+	char on_off_flag; /*on off flag read from modem side*/
+	char reserve[3];
+};
+#endif
+
 /*
  * struct logger_log - represents a specific log, such as 'main' or 'radio'
  *
@@ -452,6 +476,20 @@ ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	struct timespec now;
 	ssize_t ret = 0;
 
+    /* delete temp code in update J baseline */
+#if defined(CONFIG_HUAWEI_KERNEL)
+    /* log control */
+    if (USER_LOG_ON == atomic_read(&log_switch) || minor_of_exception == log->misc.minor
+        || minor_of_power == log->misc.minor )
+    {
+        /* log it */
+    }
+    else
+    {
+        return -1;
+    }
+#endif
+    /* delete temp code in update J baseline */
 	now = current_kernel_time();
 
 	header.pid = current->tgid;
@@ -560,11 +598,13 @@ static int logger_release(struct inode *ignored, struct file *file)
 {
 	if (file->f_mode & FMODE_READ) {
 		struct logger_reader *reader = file->private_data;
-		struct logger_log *log = reader->log;
-
-		mutex_lock(&log->mutex);
+        
+        /* logger driver NULL pointer due to mutual exclusion */
+        struct logger_log *log = reader->log;
+	       
+        mutex_lock(&log->mutex);
 		list_del(&reader->list);
-		mutex_unlock(&log->mutex);
+        mutex_unlock(&log->mutex);
 
 		kfree(reader);
 	}
@@ -687,6 +727,13 @@ static long logger_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		reader = file->private_data;
 		ret = logger_set_version(reader, argp);
 		break;
+#if defined(CONFIG_HUAWEI_KERNEL)     
+       case FIONREAD:
+            if (minor_of_power == log->misc.minor) {
+                ret = -ENOTTY;
+            }
+            break; 
+#endif
 	}
 
 	mutex_unlock(&log->mutex);
@@ -728,10 +775,20 @@ static struct logger_log VAR = { \
 	.size = SIZE, \
 };
 
+/* save 0.5M memory */
+#ifndef CONFIG_HUAWEI_KERNEL
 DEFINE_LOGGER_DEVICE(log_main, LOGGER_LOG_MAIN, 256*1024)
 DEFINE_LOGGER_DEVICE(log_events, LOGGER_LOG_EVENTS, 256*1024)
 DEFINE_LOGGER_DEVICE(log_radio, LOGGER_LOG_RADIO, 256*1024)
 DEFINE_LOGGER_DEVICE(log_system, LOGGER_LOG_SYSTEM, 256*1024)
+#else
+DEFINE_LOGGER_DEVICE(log_main, LOGGER_LOG_MAIN, 64*1024)
+DEFINE_LOGGER_DEVICE(log_events, LOGGER_LOG_EVENTS, 256*1024)
+DEFINE_LOGGER_DEVICE(log_radio, LOGGER_LOG_RADIO, 64*1024)
+DEFINE_LOGGER_DEVICE(log_system, LOGGER_LOG_SYSTEM, 64*1024)
+DEFINE_LOGGER_DEVICE(log_exception, LOGGER_LOG_EXCEPTION, 16*1024)
+DEFINE_LOGGER_DEVICE(log_power, LOGGER_LOG_POWER, 16*1024)
+#endif
 
 static struct logger_log *get_log_from_minor(int minor)
 {
@@ -743,9 +800,78 @@ static struct logger_log *get_log_from_minor(int minor)
 		return &log_radio;
 	if (log_system.misc.minor == minor)
 		return &log_system;
+#if defined(CONFIG_HUAWEI_KERNEL)
+	if (log_exception.misc.minor == minor)
+		return &log_exception;
+    if (log_power.misc.minor == minor)
+        return &log_power;
+#endif
 	return NULL;
 }
+#ifdef CONFIG_HUAWEI_KERNEL
+static int open_state = 0;
+static int log_switch_open(struct inode *inode, struct file *file)
+{
+    if (open_state == 0)
+    {
+        open_state = 1;
+        return 0;  
+    }
+    return -1;
+}
 
+static int log_switch_release(struct inode *ignored, struct file *file)
+{
+    if (open_state == 1)
+    {
+        open_state = 0;
+        return 0;
+    }
+    return -1;
+}
+
+static ssize_t log_switch_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
+{
+    int ret = 0;
+    #define STR_LEN_12 12
+    char szbuf[STR_LEN_12] = {0};
+
+    memset(szbuf, 0, STR_LEN_12);
+    snprintf(szbuf, STR_LEN_12, "%d", atomic_read(&log_switch));
+
+    ret = copy_to_user(buf, szbuf, strlen(szbuf));
+    return ret;
+}
+
+static ssize_t log_switch_write(struct file * file, const char __user * buf, size_t count, loff_t * pos)
+{
+    int val = 0;
+    char * e;
+
+    val = simple_strtoull(buf, &e, 10);
+    if (e == buf)
+    {
+        return -EINVAL;
+    }
+    atomic_set(&log_switch, val);
+    return count;
+}
+
+static const struct file_operations log_switch_fops = {
+    .owner = THIS_MODULE,
+    .read = log_switch_read,
+    .write = log_switch_write,
+    .open = log_switch_open,
+    .release = log_switch_release,
+};
+
+static struct miscdevice log_switch_misc_dev = { 
+    .minor = MISC_DYNAMIC_MINOR, 
+    .name = "log_switch", 
+    .fops = &log_switch_fops, 
+    .parent = NULL, 
+};
+#endif
 static int __init init_log(struct logger_log *log)
 {
 	int ret;
@@ -763,10 +889,50 @@ static int __init init_log(struct logger_log *log)
 	return 0;
 }
 
+#ifdef CONFIG_HUAWEI_KERNEL
+static char address_save_buf[1024];
+void save_address_to_crash_dump(const char *fmt, ...)
+{
+    va_list args;
+	static int printed_len;
+
+    if (!printed_len || printed_len >= sizeof(address_save_buf))
+    {
+        printed_len = sprintf(address_save_buf, "address_save_buf=%p; ", address_save_buf);
+    }
+
+	va_start(args, fmt);
+    printed_len += vscnprintf(address_save_buf + printed_len,
+				  sizeof(address_save_buf) - printed_len, fmt, args);
+    va_end(args);
+}
+EXPORT_SYMBOL(save_address_to_crash_dump);
+#endif
+
 static int __init logger_init(void)
 {
 	int ret;
+	/* for logcat control by nv */
+#ifdef CONFIG_HUAWEI_KERNEL
+    u16 nv_item = LOG_CTL_INFO_ITEM;
+    struct log_ctl ctl_info;
+    int  rval = -1;
 
+    /* default to disable ddms log*/
+    /* default to open ddms log temp */
+    ctl_info.on_off_flag = USER_LOG_OFF;
+    printk("%s, %d: driver default on_off_flag == %d\n", __FUNCTION__, __LINE__, ctl_info.on_off_flag);
+    rval = oem_rapi_read_nv(nv_item, (void*)&ctl_info, sizeof(ctl_info));
+    printk("logger open flag: on_off_flag=%d\n", ctl_info.on_off_flag);
+    #if 0
+    /*if log nv(NV_LOG_CTL_INFO_I) is 0 or inactive , we don't init the logger driver*/
+    if((rval != 0) || (ctl_info.on_off_flag != USER_LOG_ON))
+        return 0;	
+    #endif
+    /*regardless nv is on,create log devices, kernel control whether can write*/
+    atomic_set(&log_switch, ctl_info.on_off_flag);
+#endif
+	
 	ret = init_log(&log_main);
 	if (unlikely(ret))
 		goto out;
@@ -782,6 +948,38 @@ static int __init logger_init(void)
 	ret = init_log(&log_system);
 	if (unlikely(ret))
 		goto out;
+
+#if defined(CONFIG_HUAWEI_KERNEL)
+    ret = init_log(&log_exception);
+    if (unlikely(ret))
+        goto out;
+    ret = init_log(&log_power);
+    if (unlikely(ret))
+        goto out;
+#endif
+#if defined(CONFIG_HUAWEI_KERNEL)
+    /* record the minor of exception node */
+    minor_of_exception = log_exception.misc.minor;
+    minor_of_power = log_power.misc.minor;
+    printk("%s, minor_of_exception=%d\n", __FUNCTION__, minor_of_exception);
+
+    ret = misc_register(&log_switch_misc_dev);
+    if (unlikely(ret))
+    {
+        printk(KERN_ERR "logger: failed to register misc "
+                "device for log '%s'!\n", log_switch_misc_dev.name);
+        goto out;
+    }
+#endif
+#ifdef CONFIG_HUAWEI_KERNEL
+    save_address_to_crash_dump(" __init_begin=%p;", __init_begin);
+    save_address_to_crash_dump(" _end=%p;", _end);
+    /*save logbuf physical address, for export logs */
+    save_address_to_crash_dump(" log_main=%p-%d;", virt_to_phys(_buf_log_main), log_main.size);
+    save_address_to_crash_dump(" log_events=%p-%d;", virt_to_phys(_buf_log_events), log_events.size);
+    save_address_to_crash_dump(" log_radio=%p-%d;", virt_to_phys(_buf_log_radio), log_radio.size);
+    save_address_to_crash_dump(" log_system=%p-%d;", virt_to_phys(_buf_log_system), log_system.size);
+#endif
 
 out:
 	return ret;

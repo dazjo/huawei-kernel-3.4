@@ -43,7 +43,11 @@ obj-$(CONFIG_CHARGER_GPIO)	+= gpio-charger.o
 obj-$(CONFIG_CHARGER_MANAGER)	+= charger-manager.o
 obj-$(CONFIG_CHARGER_MAX8997)	+= max8997_charger.o
 obj-$(CONFIG_CHARGER_MAX8998)	+= max8998_charger.o
-obj-$(CONFIG_BATTERY_MSM)       += msm_battery.o
+ifeq	($(CONFIG_HUAWEI_KERNEL),y)
+obj-$(CONFIG_BATTERY_MSM)	+= huawei_battery.o
+else	
+obj-$(CONFIG_BATTERY_MSM)	+= msm_battery.o
+endif
 obj-$(CONFIG_BATTERY_MSM8X60)   += msm_charger.o
 obj-$(CONFIG_PM8058_CHARGER)    += pmic8058-charger.o
 obj-$(CONFIG_ISL9519_CHARGER)   += isl9519q.o

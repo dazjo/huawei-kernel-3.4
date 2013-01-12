@@ -29,7 +29,10 @@
 #include <mach/msm_rpcrouter.h>
 
 #define APP_TIMEREMOTE_PDEV_NAME "rs00000000"
-
+#ifdef CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM
+/*define rpc case for rtc alarm set which defined in modem rpc server*/
+#define TIMEREMOTE_PROCEEDURE_SET_ALARM		3
+#endif /*CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM*/
 #define TIMEREMOTE_PROCEEDURE_SET_JULIAN	6
 #define TIMEREMOTE_PROCEEDURE_GET_JULIAN	7
 #ifdef CONFIG_RTC_SECURE_TIME_SUPPORT
@@ -44,6 +47,7 @@
 #define RTC_CLIENT_INIT_PROC		0x12
 #define RTC_EVENT_CB_PROC		0x1
 #define RTC_CB_ID			0x1
+struct msm_rpc_client * huawei_alarm_client;
 
 /* Client request errors */
 enum rtc_rpc_err {
@@ -173,6 +177,17 @@ void msmrtc_updateatsuspend(struct timespec *ts)
 	}
 
 }
+#ifdef CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM
+static int msmrtcalarm_tod_proc_args(struct msm_rpc_client *client, void *buff,
+							void *data)
+{
+	unsigned long temp = *((unsigned long *)data);
+	unsigned long *sec = buff;
+    /*mutiply 1000 to adatpe to modem */
+	*sec = cpu_to_be32(temp * 1000);
+	return sizeof(*sec);
+}
+#endif /*CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM*/
 #else
 void msmrtc_updateatsuspend(struct timespec *ts) { }
 #endif
@@ -318,7 +333,25 @@ msmrtc_timeremote_set_time(struct device *dev, struct rtc_time *tm)
 
 	return 0;
 }
-
+#ifdef CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM
+/*Use RPC set rtc alarm time to ARM9*/
+int
+msmrtc_remote_rtc_set_alarm(struct timespec *tm)
+{
+	int rc;
+		
+	printk("Rtc-msm alarm time is %ld\n",tm->tv_sec);
+	
+	rc = msm_rpc_client_req(huawei_alarm_client,TIMEREMOTE_PROCEEDURE_SET_ALARM,
+							msmrtcalarm_tod_proc_args,&tm->tv_sec,
+							NULL,NULL,-1);
+	if (rc) {
+		printk("%s: rtc time (TOD) could not be set\n", __func__);
+		return rc;
+	}
+	return 0;
+}
+#endif /*CONFIG_HUAWEI_FEATURE_POWEROFF_ALARM*/
 static int
 msmrtc_timeremote_read_time(struct device *dev, struct rtc_time *tm)
 {
@@ -631,6 +664,8 @@ msmrtc_probe(struct platform_device *pdev)
 		kfree(rtc_pdata);
 		return rc;
 	}
+	
+	huawei_alarm_client = rtc_pdata->rpc_client;
 
 	/*
 	 * Set up the callback client.

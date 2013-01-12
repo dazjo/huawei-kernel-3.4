@@ -940,6 +940,59 @@ int __init msm_add_sdcc(unsigned int controller, struct mmc_platform_data *plat)
 	pdev->dev.platform_data = plat;
 	return platform_device_register(pdev);
 }
+#ifdef CONFIG_HUAWEI_FEATURE_OEMINFO
+static struct resource rmt_oeminfo_resources[] = {
+       {
+		.flags  = IORESOURCE_MEM,
+       },
+};
+
+static struct platform_device rmt_oeminfo_device = {
+       .name           = "rmt_oeminfo",
+       .id             = -1,
+       .num_resources  = ARRAY_SIZE(rmt_oeminfo_resources),
+       .resource       = rmt_oeminfo_resources,
+};
+
+int __init rmt_oeminfo_add_device(void)
+{
+  platform_device_register(&rmt_oeminfo_device);
+  return 0;
+}
+#endif
+
+#ifdef CONFIG_HUAWEI_KERNEL
+static struct resource hw_extern_sdcard_resources[] = {
+       {
+		.flags  = IORESOURCE_MEM,
+       },
+};
+
+static struct platform_device hw_extern_sdcard_device = {
+       .name           = "hw_extern_sdcard",
+       .id             = -1,
+       .num_resources  = ARRAY_SIZE(hw_extern_sdcard_resources),
+       .resource       = hw_extern_sdcard_resources,
+};
+static struct resource hw_extern_sdcardMounted_resources[] = {
+       {
+		.flags  = IORESOURCE_MEM,
+       },
+};
+
+static struct platform_device hw_extern_sdcardMounted_device = {
+       .name           = "hw_extern_sdcardMounted",
+       .id             = -1,
+       .num_resources  = ARRAY_SIZE(hw_extern_sdcardMounted_resources),
+       .resource       = hw_extern_sdcardMounted_resources,
+};
+int __init hw_extern_sdcard_add_device(void)
+{
+  platform_device_register(&hw_extern_sdcard_device);
+  platform_device_register(&hw_extern_sdcardMounted_device);
+  return 0;
+}
+#endif
 
 static struct resource msm_vidc_720p_resources[] = {
 	{

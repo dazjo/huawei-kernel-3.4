@@ -26,6 +26,9 @@
 #else
 #include <linux/time.h>
 #endif
+
+/* modify for 4125 baseline */
+#include <linux/slab.h>
 #include <linux/ion.h>
 
 #define BIT(nr)   (1UL << (nr))
@@ -191,6 +194,8 @@
 #define MSM_CAM_IOCTL_EEPROM_IO_CFG \
 	_IOW(MSM_CAM_IOCTL_MAGIC, 53, struct msm_eeprom_cfg_data *)
 
+#define MSM_CAM_IOCTL_GET_SENSOR_INFO_PROJECTMENU \
+	_IOR(MSM_CAM_IOCTL_MAGIC, 90, struct msm_camsensor_info *)
 #define MSM_CAM_IOCTL_ISPIF_IO_CFG \
 	_IOR(MSM_CAM_IOCTL_MAGIC, 54, struct ispif_cfg_data *)
 
@@ -210,6 +215,13 @@ struct msm_mctl_post_proc_cmd {
 #define MSM_CAMERA_LED_HIGH 2
 #define MSM_CAMERA_LED_INIT 3
 #define MSM_CAMERA_LED_RELEASE 4
+#define MSM_CAMERA_LED_TORCH 5
+#define MSM_CAMERA_LED_TORCH_LOW    6
+#define MSM_CAMERA_LED_TORCH_MIDDLE 7
+#define MSM_CAMERA_LED_TORCH_HIGH   8
+
+#define MSM_CAMERA_LED_FIRST_MMI   9
+#define MSM_CAMERA_LED_SECOND_MMI   10
 
 #define MSM_CAMERA_STROBE_FLASH_NONE 0
 #define MSM_CAMERA_STROBE_FLASH_XENON 1
@@ -816,7 +828,12 @@ struct msm_snapshot_pp_status {
 #define CFG_START_STREAM              44
 #define CFG_STOP_STREAM               45
 #define CFG_GET_CSI_PARAMS            46
-#define CFG_MAX			47
+/*lijuan add for AWB OTP*/
+#define CFG_OTP_READING     235
+/* < huawei zhangyu 20120320 begin */
+#define CFG_SET_NR          237
+#define CFG_RESET           236
+#define CFG_MAX			243
 
 
 #define MOVE_NEAR	0
@@ -1102,6 +1119,8 @@ struct sensor_calib_data {
 	uint16_t stroke_amt;
 	uint16_t af_pos_1m;
 	uint16_t af_pos_inf;
+    uint16_t af_start_code;
+	uint16_t af_max_code;
 };
 
 enum msm_sensor_resolution_t {
@@ -1261,6 +1280,7 @@ struct sensor_cfg_data {
 	union {
 		int8_t effect;
 		uint8_t lens_shading;
+		uint8_t lut_index;
 		uint16_t prevl_pf;
 		uint16_t prevp_pl;
 		uint16_t pictl_pf;
@@ -1396,6 +1416,10 @@ enum af_camera_name {
 	ACTUATOR_MAIN_CAM_3,
 	ACTUATOR_MAIN_CAM_4,
 	ACTUATOR_MAIN_CAM_5,
+	ACTUATOR_MAIN_CAM_6,
+    ACTUATOR_MAIN_CAM_7,
+    ACTUATOR_MAIN_CAM_8,
+    ACTUATOR_MAIN_CAM_9,
 	ACTUATOR_WEB_CAM_0,
 	ACTUATOR_WEB_CAM_1,
 	ACTUATOR_WEB_CAM_2,
@@ -1546,6 +1570,7 @@ struct msm_camsensor_info {
 	int mount_angle;
 	uint32_t max_width;
 	uint32_t max_height;
+	int flip_and_mirror;
 };
 
 #define V4L2_SINGLE_PLANE	0

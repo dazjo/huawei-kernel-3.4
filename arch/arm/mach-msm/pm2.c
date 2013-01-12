@@ -477,7 +477,7 @@ static void msm_pm_config_hw_before_power_down(void)
 	__raw_writel(1, APPS_PWRDOWN);
 	mb();
 }
-
+#ifdef CONFIG_HAVE_ARM_SCU
 /*
  * Program the top csr from core0 context to put the
  * core1 into GDFS, as core1 is not running yet.
@@ -543,6 +543,7 @@ static void configure_top_csr(void)
 	__raw_writel(0x0, base_ptr);
 	mb();
 }
+#endif
 
 /*
  * Clear hardware registers after Apps powers up.
@@ -565,11 +566,13 @@ static void msm_pm_config_hw_after_power_up(void)
 			 * enable the SCU while coming out of power
 			 * collapse.
 			 */
+			#ifdef CONFIG_HAVE_ARM_SCU
 			scu_enable(MSM_SCU_BASE);
 			/*
 			 * Program the top csr to put the core1 into GDFS.
 			 */
 			configure_top_csr();
+			#endif
 		}
 	} else {
 		__raw_writel(0, APPS_PWRDOWN);

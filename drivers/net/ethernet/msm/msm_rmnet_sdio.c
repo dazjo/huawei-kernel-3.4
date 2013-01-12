@@ -55,8 +55,10 @@ module_param_named(debug_enable, msm_rmnet_sdio_debug_mask,
 /* Configure device instances */
 #define RMNET_DEVICE_COUNT (8)
 
+#ifndef CONFIG_HUAWEI_KERNEL
 /* allow larger frames */
 #define RMNET_DATA_LEN 2000
+#endif
 
 #define DEVICE_ID_INVALID   -1
 

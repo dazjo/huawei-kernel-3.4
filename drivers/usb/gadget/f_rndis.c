@@ -25,6 +25,9 @@
 #include "u_ether.h"
 #include "rndis.h"
 
+#ifdef CONFIG_HUAWEI_KERNEL
+#include <asm-arm/huawei/usb_switch_huawei.h>
+#endif
 
 /*
  * This function is an RNDIS Ethernet port -- a Microsoft protocol that's
@@ -851,8 +854,23 @@ rndis_unbind(struct usb_configuration *c, struct usb_function *f)
 /* Some controllers can't support RNDIS ... */
 static inline bool can_support_rndis(struct usb_configuration *c)
 {
+#ifdef CONFIG_HUAWEI_KERNEL
+    /* us/tracfone does not want to support rndis*/
+    if(!strcmp(usb_para_data.vender_para.country_name, COUNTRY_US) 
+        && !strcmp(usb_para_data.vender_para.vender_name, VENDOR_TRACFONE))
+    {        
+        printk("%s: us/tracfone product, rndis not supported\n", __func__);
+        return false; 
+    }
+    else
+    {
+        printk("%s: general product, rndis supported\n", __func__);
+        return true;
+    }
+#else
 	/* everything else is *presumably* fine */
 	return true;
+#endif
 }
 
 /**

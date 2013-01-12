@@ -435,3 +435,13 @@ config AB8500_BATTERY_THERM_ON_BATCTRL
 	  Say Y to enable battery temperature measurements using
 	  thermistor connected on BATCTRL ADC.
 endif # POWER_SUPPLY
+
+config HUAWEI_FEATURE_DC_DC_CHARGER
+	tristate "dc_dc charger support"
+	help
+	  Say Y here to enable dc_dc charger support.
+
+config HUAWEI_EVALUATE_POWER_CONSUMPTION
+	tristate "huawei_evaluate_power_consumption"
+	help
+	  Say Y here if you want to support huawei evaluate power consumption.

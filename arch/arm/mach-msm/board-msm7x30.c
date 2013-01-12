@@ -6398,6 +6398,21 @@ static void __init msm7x30_init_mmc(void)
 #ifdef CONFIG_MMC_MSM_SDC1_SUPPORT
 	if (mmc_regulator_init(1, "s3", 1800000))
 		goto out1;
+    /* < update baseline huawei modeify begin */
+	if ( machine_is_msm7x30_fluid() 
+	|| (machine_is_msm7x30_u8800()) 
+	|| (machine_is_msm7x30_u8820()) 
+	|| (machine_is_msm7x30_u8800_51()) 
+	|| (machine_is_msm8255_u8800_pro())
+	|| (machine_is_msm8255_u8860())
+	|| (machine_is_msm8255_c8860())
+    || (machine_is_msm8255_u8860lp())
+    || machine_is_msm8255_u8860_r()
+    || (machine_is_msm8255_u8860_92())
+	|| (machine_is_msm8255_u8680())
+	|| (machine_is_msm8255_u8860_51())
+	|| (machine_is_msm8255_u8730()))
+    {
 
 	if (machine_is_msm7x30_fluid()) {
 		msm7x30_sdc1_data.ocr_mask =  MMC_VDD_27_28 | MMC_VDD_28_29;
@@ -6408,6 +6423,8 @@ static void __init msm7x30_init_mmc(void)
 	}
 
 	msm_add_sdcc(1, &msm7x30_sdc1_data);
+    }
+    /* update baseline huawei modeify end > */
 out1:
 #endif
 #ifdef CONFIG_MMC_MSM_SDC2_SUPPORT

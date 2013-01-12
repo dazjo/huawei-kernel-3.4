@@ -23,6 +23,17 @@
 #include "msm_vpe1.h"
 atomic_t irq_cnt;
 
+#ifdef CONFIG_HUAWEI_KERNEL
+#define RECORDING_ON 1
+#define RECORDING_OFF 0
+#define PREVIOUS_FRAME_IS_PREVIEW 0
+#define PREVIOUS_FRAME_IS_RECORDING 1
+/*when init, recording is off*/
+static uint32_t recording_flag = RECORDING_OFF;
+/*when init, previous frame is recording because the start preview frame can not be removed*/
+static uint32_t recording_frame_flag = PREVIOUS_FRAME_IS_RECORDING;
+#endif
+
 static struct vfe31_ctrl_type *vfe31_ctrl;
 static struct msm_camera_io_clk camio_clk;
 static void *vfe_syncdata;
@@ -1280,6 +1291,11 @@ static void vfe31_start_common(void)
 
 static int vfe31_start_recording(void)
 {
+	#ifdef CONFIG_HUAWEI_KERNEL
+	/*when start recording, init recording_flag and recording_frame_flag*/
+	recording_flag = RECORDING_ON;
+	recording_frame_flag = PREVIOUS_FRAME_IS_RECORDING;
+	#endif
 	msm_camio_set_perf_lvl(S_VIDEO);
 	usleep(1000);
 	vfe31_ctrl->recording_state = VFE_REC_STATE_START_REQUESTED;
@@ -1289,6 +1305,11 @@ static int vfe31_start_recording(void)
 
 static int vfe31_stop_recording(void)
 {
+	#ifdef CONFIG_HUAWEI_KERNEL
+	/*when stop recording, deinit recording_flag and recording_frame_flag*/
+	recording_flag = RECORDING_OFF;
+	recording_frame_flag = PREVIOUS_FRAME_IS_RECORDING;
+	#endif
 	vfe31_ctrl->recording_state = VFE_REC_STATE_STOP_REQUESTED;
 	msm_camera_io_w_mb(1, vfe31_ctrl->vfebase + VFE_REG_UPDATE_CMD);
 	msm_camio_set_perf_lvl(S_PREVIEW);
@@ -3427,6 +3448,10 @@ static void vfe31_process_output_path_irq_2(uint32_t ping_pong)
 		free_buf->paddr + free_buf->planar1_off);
 		kfree(free_buf);
 		vfe_send_outmsg(MSG_ID_OUTPUT_V, p0_addr, p1_addr, p2_addr);
+		#ifdef CONFIG_HUAWEI_KERNEL
+		/*when process, set recording_frame_flag for PREVIOUS_FRAME_IS_RECORDING*/
+		recording_frame_flag = PREVIOUS_FRAME_IS_RECORDING;
+		#endif
 	} else {
 		vfe31_ctrl->outpath.out2.frame_drop_cnt++;
 		pr_warning("path_irq_2 - no free buffer!\n");

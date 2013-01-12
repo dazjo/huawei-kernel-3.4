@@ -45,6 +45,10 @@ extern int mdp_rev;
 extern int mdp_iommu_split_domain;
 extern struct mdp_csc_cfg mdp_csc_convert[4];
 extern struct workqueue_struct *mdp_hist_wq;
+#ifdef CONFIG_HUAWEI_KERNEL
+/* Extern the mdp_pipe_ctrl_mutex for process_lcd_table function */
+extern struct semaphore mdp_pipe_ctrl_mutex;
+#endif
 
 extern uint32 mdp_intr_mask;
 

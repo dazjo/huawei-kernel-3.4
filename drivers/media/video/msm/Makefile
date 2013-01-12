@@ -19,6 +19,8 @@ else
 endif
 obj-$(CONFIG_MSM_CAMERA) += msm_axi_qos.o gemini/
 obj-$(CONFIG_MSM_CAMERA_FLASH) += flash.o
+obj-$(CONFIG_HUAWEI_FEATURE_TPS61310) += tps61310.o
+obj-$(CONFIG_HW_TORCH) += torch.o
 obj-$(CONFIG_ARCH_MSM_ARM11) += msm_vfe7x.o
 ifeq ($(CONFIG_MSM_CAMERA_V4L2),y)
   obj-$(CONFIG_ARCH_MSM7X27A) += msm_vfe7x27a_v4l2.o
@@ -36,11 +38,31 @@ endif
 obj-$(CONFIG_ARCH_MSM8960) += msm_vfe32.o msm_vpe.o
 obj-$(CONFIG_MT9T013) += mt9t013.o mt9t013_reg.o
 obj-$(CONFIG_SN12M0PZ) += sn12m0pz.o sn12m0pz_reg.o
+
+obj-$(CONFIG_HUAWEI_SENSOR_MT9V114) += mt9v114.o
+
+obj-$(CONFIG_HUAWEI_SENSOR_HI701) += hi701.o
+
+obj-$(CONFIG_HUAWEI_SENSOR_OV7690) += ov7690.o
+obj-$(CONFIG_HUAWEI_SENSOR_OV7736) += ov7736.o
+obj-$(CONFIG_HUAWEI_SENSOR_HIMAX0356) += himax0356.o
+
+#/* delete lines */
+
+#obj-$(CONFIG_HUAWEI_CAMERA_SENSOR_S5K5CA) +=  s5k5ca.o s5k5ca_sunny_reg.o
+#/* don't compile s5k4e1gx.c and s5k4e1gx_reg.c any more */
+#obj-$(CONFIG_HUAWEI_SENSOR_MT9P017) += mt9p017.o mt9p017_reg.o
+obj-$(CONFIG_HUAWEI_SENSOR_OV5647_SUNNY) += ov5647_sunny.o
+#obj-$(CONFIG_HUAWEI_SENSOR_MT9E013) += mt9e013.o mt9e013_reg.o
+#/*delete one line*/
+#obj-$(CONFIG_HUAWEI_CAMERA_SENSOR_MT9T113) +=  mt9t113.o mt9t113_byd_reg.o
+obj-$(CONFIG_HUAWEI_FEATURE_RIGHT_TPA2028D1_AMPLIFIER)	+= tpa2028d1_r.o
 obj-$(CONFIG_MT9P012) += mt9p012_reg.o
 obj-$(CONFIG_MSM_CAMERA_AF_FOXCONN) += mt9p012_fox.o
 obj-$(CONFIG_MSM_CAMERA_AF_BAM) += mt9p012_bam.o
 obj-$(CONFIG_MT9P012_KM) += mt9p012_km.o mt9p012_km_reg.o
 obj-$(CONFIG_S5K3E2FX) += s5k3e2fx.o
+#obj-$(CONFIG_HUAWEI_SENSOR_S5K4E1) += s5k4e1.o s5k4e1_reg.o
 #FIXME: Merge the two ifeq causes VX6953 preview not coming up.
 ifneq ($(CONFIG_MSM_CAMERA_V4L2),y)
   obj-$(CONFIG_VX6953) += vx6953.o vx6953_reg.o
@@ -58,6 +80,8 @@ obj-$(CONFIG_IMX072) += imx072.o imx072_reg.o
 obj-$(CONFIG_OV5640) += ov5640.o
 obj-$(CONFIG_MT9D112) += mt9d112.o mt9d112_reg.o
 
-obj-$(CONFIG_MT9D113) += mt9d113.o mt9d113_reg.o
+obj-$(CONFIG_HUAWEI_CAMERA_SENSOR_MT9D113) += mt9d113.o mt9d113_reg.o
 obj-$(CONFIG_FB_MSM_WRITEBACK_MSM_PANEL) += wfd/
 obj-$(CONFIG_MSM_V4L2_VIDEO_OVERLAY_DEVICE) += msm_v4l2_video.o
+#obj-$(CONFIG_HUAWEI_CAMERA_SENSOR_MT9V113) += mt9v113.o 
+

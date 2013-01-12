@@ -575,4 +575,26 @@ config LEDS_TRIGGER_SLEEP
 comment "iptables trigger is under Netfilter config (LED target)"
 	depends on LEDS_TRIGGERS
 
+config  HUAWEI_LEDS_PMIC
+        tristate "LED Support for 7X30 PMIC connected LEDs"
+        default y
+	depends on HUAWEI_KERNEL
+        help
+          This option enables support for LEDs connected over PMIC
+          (Power Management IC) chip on Qualcomm reference boards,
+          for example SURF and FFAs.
+config HUAWEI_FEATURE_PTT_KEY_LIGHT
+	bool "HUAWEI ptt key light driver"
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	  Select Y if use ptt key light.
+
+config HUAWEI_FEATURE_RGB_KEY_LIGHT
+	bool "HUAWEI rbg key light driver"
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	  Select Y if use RGB key light.
+
 endif # NEW_LEDS

@@ -106,6 +106,7 @@ source "drivers/staging/quickstart/Kconfig"
 
 source "drivers/staging/sbe-2t3e3/Kconfig"
 
+source "drivers/staging/rsm/Kconfig"
 source "drivers/staging/keucr/Kconfig"
 
 source "drivers/staging/bcm/Kconfig"

@@ -107,6 +107,15 @@ enum ledtype {
 	LED_LCD,
 	LED_KEYPAD,
 };
+#ifdef CONFIG_HUAWEI_KERNEL
+typedef enum
+{
+   PM_LOW_CURRENT_LED_DRV0,
+   PM_LOW_CURRENT_LED_DRV1,
+   PM_LOW_CURRENT_LED_DRV2,
+   PM_LOW_CURRENT_LED_DRV_INVALID
+} pm_low_current_led_type;
+#endif
 
 enum flash_led_mode {
 	FLASH_LED_MODE__MANUAL,
@@ -676,6 +685,20 @@ int pmic_mic_is_en(uint *enabled);
 int pmic_mic_set_volt(enum mic_volt vol);
 int pmic_mic_get_volt(enum mic_volt *voltage);
 int pmic_set_led_intensity(enum ledtype type, int level);
+/*add rpc interface for key light*/
+#ifdef CONFIG_HUAWEI_KERNEL
+int pmic_set_keyled_intensity(enum ledtype type, int level);
+#endif
+#ifdef CONFIG_HUAWEI_KERNEL
+int pmic_set_low_current_led_intensity(pm_low_current_led_type type, int level);
+#endif
+#ifdef CONFIG_HUAWEI_KERNEL
+int pmic_set_mpp6_led_intensity(int level);
+/*add rpc interface for PTT light*/
+#ifdef CONFIG_HUAWEI_FEATURE_PTT_KEY_LIGHT
+int pmic_set_ptt_current_led_intensity(int level);
+#endif
+#endif
 int pmic_flash_led_set_current(uint16_t milliamps);
 int pmic_flash_led_set_mode(enum flash_led_mode mode);
 int pmic_flash_led_set_polarity(enum flash_led_pol pol);

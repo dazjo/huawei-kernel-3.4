@@ -1,0 +1,13 @@
+
+#
+# I2C devices detect
+#
+
+config HUAWEI_HW_DEV_DCT
+	bool "HUAWEI DEVICE DETECT"
+	depends on HUAWEI_KERNEL = y
+	default n
+	help
+		Say yes if you want i2c device detect driver.
+		This is for i2c connected version. If unsure, say N here.
+

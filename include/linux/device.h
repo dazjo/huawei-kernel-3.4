@@ -257,6 +257,16 @@ struct driver_attribute {
 struct driver_attribute driver_attr_##_name =		\
 	__ATTR(_name, _mode, _show, _store)
 
+#ifdef CONFIG_HUAWEI_FEATURE_RMI_TOUCH
+
+#define DEVICE_ATTR(_name, _mode, _show, _store) \
+struct device_attribute dev_attr_##_name =          \
+    __ATTR(_name, _mode, _show, _store)
+    
+#define DEV_ATTR(_pre, _name, _mode) \
+DEVICE_ATTR(_pre##_##_name,_mode,_pre##_##_name##_show,_pre##_##_name##_store)
+
+#endif
 extern int __must_check driver_create_file(struct device_driver *driver,
 					const struct driver_attribute *attr);
 extern void driver_remove_file(struct device_driver *driver,

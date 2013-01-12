@@ -35,6 +35,12 @@
 #include "fiq.h"
 #include "smd_private.h"
 
+/* merge qcom DEBUG_CODE for RPC crashes */
+#ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+int hw_debug_irq_disabled;
+EXPORT_SYMBOL(hw_debug_irq_disabled);
+#endif
+
 enum {
 	IRQ_DEBUG_SLEEP_INT_TRIGGER = 1U << 0,
 	IRQ_DEBUG_SLEEP_INT = 1U << 1,
@@ -42,7 +48,12 @@ enum {
 	IRQ_DEBUG_SLEEP = 1U << 3,
 	IRQ_DEBUG_SLEEP_REQUEST = 1U << 4,
 };
+/* merge qcom DEBUG_CODE for RPC crashes */
+#ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+static int msm_irq_debug_mask = 0xFF;
+#else
 static int msm_irq_debug_mask;
+#endif
 module_param_named(debug_mask, msm_irq_debug_mask, int,
 		   S_IRUGO | S_IWUSR | S_IWGRP);
 
@@ -454,6 +465,12 @@ int msm_irq_enter_sleep2(bool modem_wake, int from_idle)
 
 	msm_irq_write_all_regs(VIC_INT_EN0, 0);
 
+	/* merge qcom SBA from 7x30 2030 baseline*/
+	/* applying for 7x30 & 7x27a platform, M2A_0, M2A_5, M2A_6 are not off for sleep */
+	/* writel(0x18400000, VIC_INT_EN0);*/
+#ifdef CONFIG_HUAWEI_KERNEL
+	writel((1 << INT_A9_M2A_0) | (1 << INT_A9_M2A_5) | (1 << INT_A9_M2A_6), VIC_INT_EN0);
+#endif
 	while (limit-- > 0) {
 		int pend_irq;
 		int irq = readl(VIC_IRQ_VEC_RD);

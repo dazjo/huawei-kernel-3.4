@@ -194,6 +194,15 @@ struct msm_fb_panel_data {
 	int (*on) (struct platform_device *pdev);
 	int (*off) (struct platform_device *pdev);
 	int (*power_ctrl) (boolean enable);
+#ifdef CONFIG_FB_DYNAMIC_GAMMA
+	int (*set_dynamic_gamma) (enum danymic_gamma_mode gamma_mode,struct msm_fb_data_type *mfd);
+#endif
+#ifdef CONFIG_FB_AUTO_CABC
+	int (*config_cabc) (struct msmfb_cabc_config cabc_cfg , struct msm_fb_data_type *mfd);
+#endif
+#ifdef CONFIG_HUAWEI_KERNEL
+	void (*set_cabc_brightness) (struct msm_fb_data_type *,uint32 level);
+#endif
 	struct platform_device *next;
 	int (*clk_func) (int enable);
 };

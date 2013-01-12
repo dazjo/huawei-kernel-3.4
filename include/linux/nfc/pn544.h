@@ -1,97 +1,200 @@
-/*
- * Driver include for the PN544 NFC chip.
- *
- * Copyright (C) Nokia Corporation
- *
- * Author: Jari Vanhala <ext-jari.vanhala@nokia.com>
- * Contact: Matti Aaltoenn <matti.j.aaltonen@nokia.com>
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+/* ====*====*====*====*====*====*====*====*====*====*====*====*====*====*====*
+ * 
+ *                     PN544  Near Field Communication (NFC) driver
+ * 
+ * GENERAL DESCRIPTION
+ *   driver for PN544 NFC on Huawei Mobile
+
+ * REFERENCES
+ * 
+ * EXTERNALIZED FUNCTIONS
+ *   None.
+ * 
+ * INITIALIZATION AND SEQUENCING REQUIREMENTS
+ * 
+ * Copyright (c) 2011 by HUAWEI, Incorporated.  All Rights Reserved.
+ * ====*====*====*====*====*====*====*====*====*====*====*====*====*====*====
+ * ===========================================================================
+ * 
+ *                       EDIT HISTORY FOR FILE
+ * 
+ *  This section contains comments describing changes made to this file.
+ *   Notice that changes are listed in reverse chronological order.
+ * 
+ * 
+ * when       who      what, where, why
+ * -------------------------------------------------------------------------------
+ * 20110106  genghua  create  SUPPORT PN544 NFC on Huawei Mobile
  */
 
-#ifndef _PN544_H_
-#define _PN544_H_
+/*
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of Code Aurora Forum nor
+ *       the names of its contributors may be used to endorse or promote
+ *       products derived from this software without specific prior written
+ *       permission.
+ *
+ * Alternatively, provided that this notice is retained in full, this software
+ * may be relicensed by the recipient under the terms of the GNU General Public
+ * License version 2 ("GPL") and only version 2, in which case the provisions of
+ * the GPL apply INSTEAD OF those given above.  If the recipient relicenses the
+ * software under the GPL, then the identification text in the MODULE_LICENSE
+ * macro must be changed to reflect "GPLv2" instead of "Dual BSD/GPL".  Once a
+ * recipient changes the license terms to the GPL, subsequent recipients shall
+ * not relicense under alternate licensing terms, including the BSD or dual
+ * BSD/GPL terms.  In addition, the following license statement immediately
+ * below and between the words START and END shall also then apply when this
+ * software is relicensed under the GPL:
+ *
+ * START
+ *
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License version 2 and only version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with
+ * this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+ *
+ * END
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+#ifndef _HUAWEI_PN544_H_
+#define _HUAWEI_PN544_H_
 
 #include <linux/i2c.h>
+#include <linux/miscdevice.h> 
 
-#define PN544_DRIVER_NAME	"pn544"
-#define PN544_MAXWINDOW_SIZE	7
-#define PN544_WINDOW_SIZE	4
-#define PN544_RETRIES		10
-#define PN544_MAX_I2C_TRANSFER	0x0400
-#define PN544_MSG_MAX_SIZE	0x21 /* at normal HCI mode */
+#define HCI_MODE					0 
+#define FW_MODE						1 
 
-/* ioctl */
-#define PN544_CHAR_BASE		'P'
-#define PN544_IOR(num, dtype)	_IOR(PN544_CHAR_BASE, num, dtype)
-#define PN544_IOW(num, dtype)	_IOW(PN544_CHAR_BASE, num, dtype)
-#define PN544_GET_FW_MODE	PN544_IOW(1, unsigned int)
-#define PN544_SET_FW_MODE	PN544_IOW(2, unsigned int)
-#define PN544_GET_DEBUG		PN544_IOW(3, unsigned int)
-#define PN544_SET_DEBUG		PN544_IOW(4, unsigned int)
+#define PN544_I2C_ADDR				0x28
+#ifdef CONFIG_ARCH_MSM7X30
+#define GPIO_NFC_INT				49
+#define GPIO_NFC_VEN				130
+#define GPIO_NFC_LOAD 				181
+#else
+#define GPIO_NFC_INT				114    
+#define GPIO_NFC_VEN				113       
+#define GPIO_NFC_LOAD 				115
+#endif
 
-/* Timing restrictions (ms) */
-#define PN544_RESETVEN_TIME	30 /* 7 */
-#define PN544_PVDDVEN_TIME	0
-#define PN544_VBATVEN_TIME	0
-#define PN544_GPIO4VEN_TIME	0
-#define PN544_WAKEUP_ACK	5
-#define PN544_WAKEUP_GUARD	(PN544_WAKEUP_ACK + 1)
-#define PN544_INACTIVITY_TIME	1000
-#define PN544_INTERFRAME_DELAY	200 /* us */
-#define PN544_BAUDRATE_CHANGE	150 /* us */
+#define PN544_MAGIC	0xE9
 
-/* Debug bits */
-#define PN544_DEBUG_BUF		0x01
-#define PN544_DEBUG_READ	0x02
-#define PN544_DEBUG_WRITE	0x04
-#define PN544_DEBUG_IRQ		0x08
-#define PN544_DEBUG_CALLS	0x10
-#define PN544_DEBUG_MODE	0x20
+/*
+ * PN544 power control via ioctl
+ * PN544_SET_PWR(0): power off
+ * PN544_SET_PWR(1): power on
+ * PN544_SET_PWR(2): reset and power on with firmware download enabled
+ */
+#define PN544_SET_PWR	_IOW(PN544_MAGIC, 0x01, unsigned int)
 
-/* Normal (HCI) mode */
-#define PN544_LLC_HCI_OVERHEAD	3 /* header + crc (to length) */
-#define PN544_LLC_MIN_SIZE	(1 + PN544_LLC_HCI_OVERHEAD) /* length + */
-#define PN544_LLC_MAX_DATA	(PN544_MSG_MAX_SIZE - 2)
-#define PN544_LLC_MAX_HCI_SIZE	(PN544_LLC_MAX_DATA - 2)
+#define PN544_DRIVER_NAME			"pn544"
+#define PN544_DRIVER_DESC 			"NFC driver for PN544 on huawei mobile"
+#define PN544_MAX_I2C_TRANSFER 		0x0400 
+#define PN544_MSG_MAX_SIZE     		0x21							/* at normal HCI mode */ 
+#define PN544_LLC_HCI_OVERHEAD 		3								/* header + crc (to length) */ 
+#define PN544_LLC_MIN_SIZE     		(1 + PN544_LLC_HCI_OVERHEAD)	/* length + */ 
+#define PN544_LLC_MAX_DATA    		(PN544_MSG_MAX_SIZE - 2) 
+#define PN544_LLC_MAX_HCI_SIZE 		(PN544_LLC_MAX_DATA - 2) 
+#define PN544_NODATA				((PN544_I2C_ADDR << 1) + 1)
+#define PN544_RESET_SEND_SIZE 		6
+#define PN544_FWDLD_FIRST_SEND_SIZE 		3              /*we will send 010000 here*/
+#define PN544_RESET_SEND_TIMES             3
+#define PN544_RESET_RECEIVE_SIZE 	4
+#define PN544_MAX_PACK_LEN			512
+#define PN544_DEBUG_ON				1
+#define PN544_DEBUG_OFF				0
+#define PN544_DEBUG_SET_CLOCKANDSTANDBY		17
 
-struct pn544_llc_packet {
-	unsigned char length; /* of rest of packet */
-	unsigned char header;
-	unsigned char data[PN544_LLC_MAX_DATA]; /* includes crc-ccitt */
+struct pn544_llc_packet { 
+	unsigned char length;					/* of rest of packet */ 
+	unsigned char header; 
+	unsigned char data[PN544_LLC_MAX_DATA]; /* includes crc-ccitt */ 
+}; 
+
+
+enum pn544_state { 
+	PN544_ST_COLD, 
+	PN544_ST_READY, 
+}; 
+
+enum pn544_irq { 
+	PN544_NONE, 
+	PN544_INT, 
+}; 
+struct pn544_info { 
+	struct miscdevice miscdev; 
+	struct i2c_client *i2c_dev; 
+
+	enum pn544_state state; 
+	wait_queue_head_t read_wait; 
+	loff_t read_offset; 
+	int use_read_irq;
+	enum pn544_irq read_irq; 
+	struct mutex read_mutex;			/* Serialize read_irq access */ 
+	struct mutex mutex;					/* Serialize info struct access */ 
+	struct mutex mutex_mmi;				/* Serialize info struct access */ 
+	u8 *buf; 
+	unsigned int buflen; 
+	bool				irq_enabled;
+	spinlock_t	irq_enabled_lock;       /* irq spinlock */ 
 };
 
-/* Firmware upgrade mode */
-#define PN544_FW_HEADER_SIZE	3
-/* max fw transfer is 1024bytes, but I2C limits it to 0xC0 */
-#define PN544_MAX_FW_DATA	(PN544_MAX_I2C_TRANSFER - PN544_FW_HEADER_SIZE)
-
-struct pn544_fw_packet {
-	unsigned char command; /* status in answer */
-	unsigned char length[2]; /* big-endian order (msf) */
-	unsigned char data[PN544_MAX_FW_DATA];
-};
-
-#ifdef __KERNEL__
-/* board config */
 struct pn544_nfc_platform_data {
-	int (*request_resources) (struct i2c_client *client);
-	void (*free_resources) (void);
-	void (*enable) (int fw);
-	int (*test) (void);
-	void (*disable) (void);
+	int (*pn544_ven_reset)(void);
+	int (*pn544_interrupt_gpio_config)(void);
+	int (*pn544_fw_download_pull_high)(void);
+	int (*pn544_fw_download_pull_down)(void);	
+#ifdef CONFIG_ARCH_MSM7X30
+	/* no other func */
+#else	
+    int (*pn544_clock_output_ctrl)(int);
+    int (*pn544_clock_output_mode_ctrl)(int);
+#endif	
 };
-#endif /* __KERNEL__ */
 
-#endif /* _PN544_H_ */
+/* the following functions are used for huawei MMI_TEST */ 
+
+int pn544_mmi_init(void);
+
+int pn544_hci_exec(char *);
+int pn544_hci_reset(void);
+int pn544_hcibase_open(void);
+
+int pn544_send_for_mmi(char * pszBuf,unsigned short SendCnt);
+int pn544_read_for_mmi(char * pszBuf);
+enum pn544_irq pn544_irq_state(struct pn544_info *info) ;
+
+extern int pn544_debug_mask;
+extern int pn544_debug_control;
+extern int pn544_use_read_irq;
+extern struct i2c_client pn544_client;
+extern struct pn544_info * pn544_info;
+
+
+#endif

@@ -1,6 +1,6 @@
 /*
    BlueZ - Bluetooth protocol stack for Linux
-   Copyright (c) 2000-2001, 2010-2012 Code Aurora Forum.  All rights reserved.
+   Copyright (c) 2000-2001, 2010-2011 Code Aurora Forum.  All rights reserved.
 
    Written 2000,2001 by Maxim Krasnyansky <maxk@qualcomm.com>
 
@@ -21,6 +21,7 @@
    COPYRIGHTS, TRADEMARKS OR OTHER RIGHTS, RELATING TO USE OF THIS
    SOFTWARE IS DISCLAIMED.
 */
+// rollback to original BlueZ
 
 #ifndef __BLUETOOTH_H
 #define __BLUETOOTH_H
@@ -65,7 +66,6 @@ struct bt_security {
 #define BT_SECURITY_HIGH	3
 
 #define BT_DEFER_SETUP	7
-#define BT_FLUSHABLE	8
 
 #define BT_POWER	9
 struct bt_power {
@@ -98,28 +98,6 @@ struct bt_power {
  *     than BR/EDR
  */
 #define BT_AMP_POLICY_PREFER_AMP       2
-
-#define BT_LE_PARAMS	100
-
-#define BT_LE_SCAN_WINDOW_MIN		0x0004
-#define BT_LE_SCAN_WINDOW_MAX		0x4000
-#define BT_LE_SCAN_WINDOW_DEF		0x0004
-
-#define BT_LE_SCAN_INTERVAL_MIN		0x0004
-#define BT_LE_SCAN_INTERVAL_MAX		0x4000
-#define BT_LE_SCAN_INTERVAL_DEF		0x0008
-
-#define BT_LE_CONN_INTERVAL_MIN		0x0006
-#define BT_LE_CONN_INTERVAL_MAX		0x0C80
-#define BT_LE_CONN_INTERVAL_MIN_DEF	0x0008
-#define BT_LE_CONN_INTERVAL_MAX_DEF	0x0100
-
-#define BT_LE_LATENCY_MAX		0x01F4
-#define BT_LE_LATENCY_DEF		0x0000
-
-#define BT_LE_SUP_TO_MIN		0x000A
-#define BT_LE_SUP_TO_MAX		0x0C80
-#define BT_LE_SUP_TO_DEFAULT		0X03E8
 
 #define BT_INFO(fmt, arg...) printk(KERN_INFO "Bluetooth: " fmt "\n" , ## arg)
 #define BT_ERR(fmt, arg...)  printk(KERN_ERR "%s: " fmt "\n" , __func__ , ## arg)
@@ -164,20 +142,6 @@ bdaddr_t *strtoba(char *str);
 
 #define bt_sk(__sk) ((struct bt_sock *) __sk)
 
-struct bt_le_params {
-	__u8  prohibit_remote_chg;
-	__u8  filter_policy;
-	__u16 scan_interval;
-	__u16 scan_window;
-	__u16 interval_min;
-	__u16 interval_max;
-	__u16 latency;
-	__u16 supervision_timeout;
-	__u16 min_ce_len;
-	__u16 max_ce_len;
-	__u16 conn_timeout;
-};
-
 struct bt_sock {
 	struct sock sk;
 	bdaddr_t    src;
@@ -185,7 +149,6 @@ struct bt_sock {
 	struct list_head accept_q;
 	struct sock *parent;
 	u32 defer_setup;
-	struct bt_le_params le_params;
 };
 
 struct bt_sock_list {

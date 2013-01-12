@@ -39,11 +39,19 @@
 #endif
 #include "diag_dci.h"
 
+
+#ifdef CONFIG_HUAWEI_FEATURE_PHUDIAG
+#include "phudiagchar.h"
+#include "phudiagfwd.h"
+#endif
 #define MODE_CMD		41
 #define RESET_ID		2
 #define ALL_EQUIP_ID		100
 #define ALL_SSID		-1
 #define MAX_SSID_PER_RANGE	100
+#ifdef CONFIG_HUAWEI_FEATURE_PHUDIAG
+int phudiagfwd_usb_diag_suspend_packet_num = 0;
+#endif
 
 int diag_debug_buf_idx;
 unsigned char diag_debug_buf[1024];
@@ -269,9 +277,29 @@ void __diag_smd_send_req(void)
 			if (!buf)
 				pr_info("Out of diagmem for Modem\n");
 			else {
+				#ifdef CONFIG_HUAWEI_FEATURE_PHUDIAG
+				mutex_lock(&phudriver->diagchar_mutex);
+				if(phudriver->opened)
+				{	
+					if(r != phudiagfwd_ring_buf_set_data_before_process(phudriver->in_buf, r))
+					{
+						printk(KERN_INFO "__diag_smd_send_req write in_buf out of memory !\n");
+						mutex_unlock(&phudriver->diagchar_mutex);
+						return;
+					}
+				}
+				#endif
 				APPEND_DEBUG('i');
 				smd_read(driver->ch, buf, r);
 				APPEND_DEBUG('j');
+				#ifdef CONFIG_HUAWEI_FEATURE_PHUDIAG
+				if(phudriver->opened)
+				{
+					memcpy(phudriver->in_buf->end,buf,r);
+					phudriver->in_buf->end += r;
+				}
+				mutex_unlock(&phudriver->diagchar_mutex);
+				#endif
 				write_ptr_modem->length = r;
 				*in_busy_ptr = 1;
 				diag_device_write(buf, MODEM_DATA,
@@ -282,6 +310,19 @@ void __diag_smd_send_req(void)
 		(driver->logging_mode == MEMORY_DEVICE_MODE)) {
 		chk_logging_wakeup();
 	}
+
+	#ifdef CONFIG_HUAWEI_FEATURE_PHUDIAG
+	phudiagfwd_usb_diag_suspend_packet_num++;
+	mutex_lock(&phudriver->diagchar_mutex);
+	if(phudriver->opened && NULL == buf 
+	   && phudiagfwd_usb_diag_suspend_packet_num > 10 )
+	{
+		phudiagfwd_usb_diag_suspend_packet_num = 10;
+		phudiagfwd_read_data_from_smd();
+	}
+	mutex_unlock(&phudriver->diagchar_mutex);
+	#endif
+		
 }
 
 int diag_device_write(void *buf, int proc_num, struct diag_request *write_ptr)
@@ -1219,6 +1260,21 @@ static int diag_process_apps_pkt(unsigned char *buf, int len)
 					packet_type = 0;
 				}
 			}
+/* support automation diag command */
+#ifdef CONFIG_HUAWEI_KERNEL
+			/* automation cmd_code is 0xF6 */
+			/* judge if it is automation cmd_code */
+			else if ((entry.cmd_code == 255) 
+					&& (entry.subsys_id == 0xF6) 
+					&& (cmd_code == 0xF6))
+			{
+				if ((entry.cmd_code_lo <= subsys_id) && (entry.cmd_code_hi >= subsys_id))
+				{
+					diag_send_data(entry, buf, len,data_type);
+					packet_type = 0;
+				}
+			}
+#endif
 		}
 	}
 #if defined(CONFIG_DIAG_OVER_USB)
@@ -1839,6 +1895,9 @@ static int diag_smd_probe(struct platform_device *pdev)
 	pm_runtime_enable(&pdev->dev);
 	pr_debug("diag: open SMD port, Id = %d, r = %d\n", pdev->id, r);
 
+	#ifdef CONFIG_HUAWEI_FEATURE_PHUDIAG
+	phudriver->ch = driver->ch;
+	#endif
 	return 0;
 }
 
@@ -2097,6 +2156,10 @@ void diagfwd_init(void)
 		goto err;
 	}
 #endif
+	#ifdef CONFIG_HUAWEI_FEATURE_PHUDIAG
+	phudriver->diag_wq = driver->diag_wq;
+	phudriver->diag_read_smd_work = &(driver->diag_read_smd_work);
+	#endif
 	platform_driver_register(&msm_smd_ch1_driver);
 	platform_driver_register(&diag_smd_lite_driver);
 

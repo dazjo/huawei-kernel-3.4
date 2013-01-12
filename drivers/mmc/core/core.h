@@ -51,6 +51,9 @@ void mmc_power_off(struct mmc_host *host);
 
 static inline void mmc_delay(unsigned int ms)
 {
+#ifdef CONFIG_HUAWEI_KERNEL
+		mdelay(ms);
+#else
 	if (ms < 1000 / HZ) {
 		cond_resched();
 		mdelay(ms);
@@ -59,6 +62,7 @@ static inline void mmc_delay(unsigned int ms)
 	} else {
 		msleep(ms);
 	}
+#endif
 }
 
 void mmc_rescan(struct work_struct *work);

@@ -16,7 +16,10 @@ int32_t msm_camera_i2c_rxdata(struct msm_camera_i2c_client *dev_client,
 	unsigned char *rxdata, int data_length)
 {
 	int32_t rc = 0;
-	uint16_t saddr = dev_client->client->addr >> 1;
+	/*add judgement to get the right i2c addr for reading and writing datas */
+	uint16_t saddr = (dev_client->addr_dir > 0)? (dev_client->client->addr >> (1 + dev_client-> addr_pos))
+				: ((dev_client->addr_dir < 0)? (dev_client->client->addr << (dev_client-> addr_pos - 1))
+				: (dev_client->client->addr >> 1));
 	struct i2c_msg msgs[] = {
 		{
 			.addr  = saddr,
@@ -41,7 +44,9 @@ int32_t msm_camera_i2c_txdata(struct msm_camera_i2c_client *dev_client,
 				unsigned char *txdata, int length)
 {
 	int32_t rc = 0;
-	uint16_t saddr = dev_client->client->addr >> 1;
+	uint16_t saddr = (dev_client->addr_dir > 0)? (dev_client->client->addr >> (1 + dev_client-> addr_pos))
+					: ((dev_client->addr_dir < 0)? (dev_client->client->addr << (dev_client-> addr_pos - 1))
+					: (dev_client->client->addr >> 1));
 	struct i2c_msg msg[] = {
 		{
 			.addr = saddr,

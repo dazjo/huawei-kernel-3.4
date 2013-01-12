@@ -628,6 +628,10 @@ extern void dpm_complete(pm_message_t state);
 
 extern void device_pm_unlock(void);
 extern int dpm_suspend_end(pm_message_t state);
+/*add qcom debug code*/
+#ifdef CONFIG_HUAWEI_RPC_CRASH_DEBUG
+void print_dpm_list(void);
+#endif
 extern int dpm_suspend_start(pm_message_t state);
 extern int dpm_suspend(pm_message_t state);
 extern int dpm_prepare(pm_message_t state);

@@ -48,6 +48,8 @@
 #endif
 
 #define MSM_V4L2_SWFI_LATENCY 3
+/*we will use this variable to get the handle of media controller in mt9p017_v4l2.c*/
+uint32_t my_mctl_handle = 0;
 /* VFE required buffer number for streaming */
 static struct msm_isp_color_fmt msm_isp_formats[] = {
 	{
@@ -152,8 +154,21 @@ static int msm_get_sensor_info(
 	D("%s: sensor_name %s\n", __func__, sdata->sensor_name);
 
 	memcpy(&info.name[0], sdata->sensor_name, MAX_SENSOR_NAME);
+#ifndef CONFIG_HUAWEI_CAMERA
 	info.flash_enabled = sdata->flash_data->flash_type !=
 					MSM_CAMERA_FLASH_NONE;
+#else
+	if(sdata->flash_data->flash_src->get_board_support_flash != NULL)
+	{
+		/*whether board support flash is another factor for flash_enabled*/
+		info.flash_enabled = (sdata->flash_data->flash_type != MSM_CAMERA_FLASH_NONE)
+			 && (true == sdata->flash_data->flash_src->get_board_support_flash());
+	}
+	else
+	{
+		info.flash_enabled = (sdata->flash_data->flash_type != MSM_CAMERA_FLASH_NONE);
+	}
+#endif
 	info.pxlcode = pcam->usr_fmts[0].pxlcode;
 	info.flashtype = sdata->flash_type; /* two flash_types here? */
 	info.camera_type = sdata->camera_type;
@@ -163,6 +178,7 @@ static int msm_get_sensor_info(
 	info.actuator_enabled = sdata->actuator_info ? 1 : 0;
 	info.strobe_flash_enabled = sdata->strobe_flash_data ? 1 : 0;
 	info.ispif_supported = mctl->ispif_sdev ? 1 : 0;
+	info.flip_and_mirror = ( HW_MIRROR_AND_FLIP == (get_hw_camera_mirror_type() & HW_MIRROR_AND_FLIP) )? 1 : 0;
 
 	/* copy back to user space */
 	if (copy_to_user((void *)arg,
@@ -174,6 +190,35 @@ static int msm_get_sensor_info(
 	return rc;
 }
 
+/*func to get sensor name of camera for projectmenu*/
+static int msm_get_sensor_info_projectmenu(
+	struct msm_cam_media_controller *mctl,
+	void __user *arg)
+{
+	int rc = 0;
+	struct msm_camsensor_info info;
+	struct msm_camera_sensor_info *sdata;
+	/* copy from user space */
+	if (copy_from_user(&info,
+			arg,
+			sizeof(struct msm_camsensor_info))) {
+		ERR_COPY_FROM_USER();
+		return -EFAULT;
+	}
+
+	sdata = mctl->sdata;
+	D("%s: sensor_name %s\n", __func__, sdata->sensor_name);
+
+	memcpy(&info.name[0], sdata->sensor_name, MAX_SENSOR_NAME);
+	/* copy back to user space */
+	if (copy_to_user((void *)arg,
+				&info,
+				sizeof(struct msm_camsensor_info))) {
+		ERR_COPY_TO_USER();
+		rc = -EFAULT;
+	}
+	return rc;
+}
 static int msm_mctl_set_vfe_output_mode(struct msm_cam_media_controller
 					*p_mctl, void __user *arg)
 {
@@ -406,6 +451,9 @@ static int msm_mctl_cmd(struct msm_cam_media_controller *p_mctl,
 		rc = v4l2_subdev_call(p_mctl->ispif_sdev,
 			core, ioctl, VIDIOC_MSM_ISPIF_CFG, argp);
 		break;
+	case MSM_CAM_IOCTL_GET_SENSOR_INFO_PROJECTMENU:
+		rc = msm_get_sensor_info_projectmenu(p_mctl, argp);
+			break;
 	default:
 		/* ISP config*/
 		D("%s:%d: go to default. Calling msm_isp_config\n",
@@ -801,6 +849,7 @@ int msm_mctl_init(struct msm_cam_v4l2_device *pcam)
 		return -EINVAL;
 	}
 	pcam->mctl_handle = msm_camera_get_mctl_handle();
+	my_mctl_handle = pcam->mctl_handle;
 	if (pcam->mctl_handle == 0) {
 		pr_err("%s: cannot get mctl handle", __func__);
 		return -EINVAL;

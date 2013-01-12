@@ -370,6 +370,11 @@ static inline struct rt6_info *rt6_device_match(struct net *net,
 
 	for (sprt = rt; sprt; sprt = sprt->dst.rt6_next) {
 		struct net_device *dev = sprt->dst.dev;
+		/*if dev is null , it will lead to kernel panic*/
+#ifdef CONFIG_HUAWEI_KERNEL
+		if(NULL == dev)
+			continue;
+#endif
 
 		if (oif) {
 			if (dev->ifindex == oif)

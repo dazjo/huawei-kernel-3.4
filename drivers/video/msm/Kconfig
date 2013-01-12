@@ -221,6 +221,123 @@ config FB_MSM_MIPI_DSI_TC358764_DSI2LVDS
 	  and up to WUXGA 1920x1200 18-bit
 	  using a dual LVDS link.
 
+config FB_HUAWEI_MIPI_DSI_RSP61408
+	bool "support MIPI RSP61408"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_NT35516
+	bool "support MIPI NT35516"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_HX8369A_FWVGA
+	bool "support MIPI HX8369A FWVGA"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_NT35510_FWVGA
+	bool "support MIPI NT35510 FWVGA"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_NT35560
+	bool "support MIPI NT35560"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_NT35510
+	bool "support MIPI NT35510"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_OTM8009A
+	bool "support MIPI OTM8009A"
+	select FB_MSM_MIPI_DSI
+	default n
+	
+#/*Add otm8018b for video mode*/
+config FB_HUAWEI_MIPI_DSI_OTM8018B
+	bool "support MIPI OTM8018B"
+	select FB_MSM_MIPI_DSI
+	default n
+
+#/*Add nt35512 for video mode*/
+config FB_HUAWEI_MIPI_DSI_NT35512
+	bool "support MIPI NT35512"
+	select FB_MSM_MIPI_DSI
+	default n
+
+config FB_HUAWEI_MIPI_DSI_NT35310
+	bool "support MIPI NT35310"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_OTM8009A_FWVGA
+	bool "support MIPI OTM8009A FWVGA"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_HX8357C
+	bool "support MIPI HX8357C"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_HX8369A
+	bool "support MIPI HX8369A"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_MIPI_DSI_HX8369B
+	bool "support MIPI HX8369B"
+	select FB_MSM_MIPI_DSI
+	default n
+config FB_HUAWEI_LCDC_HX8357B
+	bool "support LCDC HX8357B"
+	select FB_MSM_LCDC_PANEL
+	default n          
+config FB_HUAWEI_LCDC_HX8357C
+	bool "support LCDC HX8357C"
+	select FB_MSM_LCDC_PANEL
+	default n
+config FB_HUAWEI_LCDC_R61529
+	bool "support LCDC R61529"
+	select FB_MSM_LCDC_PANEL
+	default n
+config FB_HUAWEI_LCDC_NT35410
+	bool "support LCDC NT35410"
+	select FB_MSM_LCDC_PANEL
+	default n
+config FB_HUAWEI_LCDC_HX8347D
+	bool "support LCDC HX8347D"
+	select FB_MSM_LCDC_PANEL
+	default n
+config FB_HUAWEI_LCDC_HX8347G
+	bool "support LCDC HX8347G"
+	select FB_MSM_LCDC_PANEL
+	default n
+
+config FB_HUAWEI_MDDI_NT35582
+	bool "support MDDI NT35582"
+	select FB_MSM_MDDI
+	default n          
+config FB_HUAWEI_MDDI_NT35510
+	bool "support MDDI NT35510"
+	select FB_MSM_MDDI
+	default n
+
+config FB_HUAWEI_MDDI_NT35510_TYPE2
+	bool "support MDDI NT35510 type2"
+	select FB_MSM_MDDI
+	default n
+
+config FB_HUAWEI_MDDI_NT35560
+	bool "support MDDI NT35560"
+	select FB_MSM_MDDI
+	default n
+config FB_HUAWEI_MDDI_RSP61408
+	bool "support MDDI RSP61408"
+	select FB_MSM_MDDI
+	default n
+config FB_HUAWEI_MDDI_HX8369A
+	bool "support MDDI HX8369A"
+	select FB_MSM_MDDI
+	default n
+config FB_HUAWEI_MDDI_HX8357C
+	bool "support MDDI HX8357C"
+	select FB_MSM_MDDI
+	default n
+	
 config FB_MSM_LCDC_ST15_WXGA
     bool
     select FB_MSM_LCDC_PANEL
@@ -959,4 +1076,17 @@ config FB_MSM_EBI2_PANEL_DETECT
 if FB_MSM_MDSS
 	source "drivers/video/msm/mdss/Kconfig"
 endif
+#/* add the code for dynamic gamma function */
+config FB_DYNAMIC_GAMMA
+	bool "Support for DYNAMIC_GAMMA fuction of glory"
+	depends on FB_MSM
+#/* change default state to 'n', move this config to hw7x30_defconfig */
+	default n
+
+#/* Add code for automatic CABC function */
+config FB_AUTO_CABC
+	bool "Support for AUTO_CABC fuction"
+	depends on FB_MSM
+	default n
+
 endif

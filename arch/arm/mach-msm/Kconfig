@@ -68,6 +68,13 @@ config ARCH_MSM7X30
 	select HOLES_IN_ZONE if SPARSEMEM
 	select MSM_MODEM_RESTART
 
+#huawei modify
+config HUAWEI_MSM_VIBRATOR
+	tristate "Huawei 7x30 vibrator"	
+	default n
+	help
+	  if Y ,select HUAWEI_MSM_VIBRATOR  
+
 config ARCH_QSD8X50
 	bool "QSD8X50"
 	select ARCH_MSM_SCORPION
@@ -302,6 +309,7 @@ config ARCH_MSM8625
 	select MSM_RUN_QUEUE_STATS
 	select MIGHT_HAVE_CACHE_L2X0
 	select ARM_HAS_SG_CHAIN
+	select DONT_MAP_HOLE_AFTER_MEMBANK0
 
 config ARCH_MSM9625
 	bool "MSM9625"
@@ -874,6 +882,177 @@ config MACH_FSM9XXX_SURF
 	  chipset based SURF evaluation board and
 	  FFA board.
 
+config  HUAWEI_KERNEL
+	bool "HUAWEI Product"
+	depends on ARCH_MSM7X27A
+	default n
+	help
+	  Support for the HUAWEI board.
+	  
+config FRAMEBUF_SELF_ADAPT
+	tristate "Huawei framebuffer self adapt"	
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	  if Y ,select FRAMEBUF_SELF_ADAPT  
+
+config MACH_MSM7X27A_U8815
+        depends on ARCH_MSM7X27A
+        depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM7X27A_U8815 SURF"
+	help
+	  Support for the HUAWEI 7X27A U8815 board.
+
+
+config MACH_MSM7X27A_U8655_EMMC
+        depends on ARCH_MSM7X27A
+        depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM7X27A_U8655Pro SURF"
+	help
+	  Support for the HUAWEI 7X27A U8655Pro board.
+config MACH_MSM7X27A_M660
+	depends on ARCH_MSM7X27A
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM7X27A_M660 SURF"
+	help
+	  Support for the HUAWEI 7X27A M660 board.
+config MACH_MSM7X27A_C8820
+	depends on ARCH_MSM7X27A
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM7X27A_C8820 SURF"
+	help
+	  Support for the HUAWEI 7X27A C8820 board.
+
+config MACH_MSM7X27A_H867G
+        depends on ARCH_MSM7X27A
+        depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM7X27A_H867G SURF"
+	help
+	  Support for the HUAWEI 7X27A H867G board.
+
+
+config MACH_MSM7X27A_H868C
+        depends on ARCH_MSM7X27A
+        depends on !MSM_STACKED_MEMORY
+    default n
+    bool "MSM7X27A_H868C SURF"
+    help
+      Support for the HUAWEI 7X27A H868C board.
+
+config MACH_MSM8X25_C8825D
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_C8825D SURF"
+	help
+	  Support for the HUAWEI 8x25 C8825D board.	  
+
+config MACH_MSM8X25_U8825
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_U8825 SURF"
+	help
+	  Support for the HUAWEI 8x25 U8825 board.	  
+
+config MACH_MSM8X25_U8825D
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_U8825D SURF"
+	help
+	  Support for the HUAWEI 8x25 U8825D board.
+config MACH_MSM8X25_U8951D
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_U8951D SURF"
+	help
+	  Support for the HUAWEI 8x25 U8951D board.
+
+config MACH_MSM8X25_U8951
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_U8951 SURF"
+	help
+	  Support for the HUAWEI 8x25 U8951 board.
+
+config MACH_MSM8X25_U8833D
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_U8833D SURF"
+	help
+	  Support for the HUAWEI 8x25 U8833D board.
+
+config MACH_MSM8X25_U8833
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_U8833 SURF"
+	help
+	  Support for the HUAWEI 8x25 U8833 board.
+config MACH_MSM8X25_C8950D
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_C8950D SURF"
+	help
+	  Support for the HUAWEI 8x25 C8950D board.	  
+
+config MACH_MSM8X25_U8950D
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_U8950D SURF"
+	help
+	  Support for the HUAWEI 8x25 U8950D board.
+
+config MACH_MSM8X25_U8950
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_U8950 SURF"
+	help
+	  Support for the HUAWEI 8x25 U8950 board.
+config MACH_MSM8X25_C8812P
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_C8812P SURF"
+	help
+	  Support for the HUAWEI 8x25 C8812P board.
+    
+config MACH_MSM8X25_C8833D
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_C8833D SURF"
+	help
+	  Support for the HUAWEI 8x25 C8833D board.
+    
+config MACH_MSM8X25_C8813
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_C8813 SURF"
+	help
+	  Support for the HUAWEI 8x25 C8813 board.
+
+config MACH_MSM8X25_H881C
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_H881C SURF"
+	help
+	  Support for the HUAWEI 8x25 H881C board.
+
 endmenu
 
 config MSM_STACKED_MEMORY
@@ -996,6 +1175,7 @@ choice
 		  Say Y here if you want the debug print routines to direct
 		  their output to the serial port on MSM 8660 devices.
 
+	#fix recursive dependency detected!
 	config DEBUG_MSM8960_UART
 		bool "Kernel low-level debugging messages via MSM 8960 UART"
 		depends on ARCH_MSM8960 && DEBUG_LL
@@ -2482,3 +2662,78 @@ config MSM_FIQ
 	  Modem will then generate an raise a FIQ on this line before sending
 	  SMSM reset
 endif
+
+config HUAWEI_GPIO_KEYPAD
+	bool "MSM HUAWEI GPIO keypad"
+	depends on INPUT_GPIO = "y"
+	default n
+	help
+	  Select if the GPIO keypad is attached.
+
+config HUAWEI_FEATURE_VIBRATOR
+	depends on HUAWEI_KERNEL
+	tristate "Huawei 8800 vibrator"	
+	default n
+	help
+	  if Y ,select HUAWEI_FEATURE_VIBRATOR 
+
+config HUAWEI_SETTING_TIMER_FOR_VIBRATOR_OFF
+	depends on HUAWEI_FEATURE_VIBRATOR
+	tristate "Huawei stop vibratting with timer"	
+	default n
+	help
+	  if Y ,select HUAWEI_SETTING_TIMER_FOR_VIBRATOR_OFF 
+
+config HUAWEI_U8800PP1_WIFI_LOW_CONSUME
+	depends on MACH_MSM7X30_U8800
+	tristate "Huawei config wifi for low consume at PP1 version"	
+	default y
+	help
+	  if Y ,select HUAWEI_U8800PP1_CONFIG_WIFI_LOW_CONSUME 
+
+config  HUAWEI_FEATURE_OEMINFO
+	depends on HUAWEI_KERNEL
+	default y
+	tristate "OEMINFO"
+
+config HUAWEI_MTK6252_MODEM
+	depends on HUAWEI_KERNEL
+	tristate "mtk6252 modem"
+	default n
+	help
+	  Support mtk6252 as modem.
+
+config HUAWEI_POWER_DOWN_CHARGE
+	default y
+	tristate "huawei_power_down_charge"
+	help
+	  Say Y here if you want to support huawei_power_down_charge.
+
+config HUAWEI_RPC_CRASH_DEBUG
+	bool "HUAWEI rpc crash debug"
+        select OPROFILE
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	  Select Y if use rpc related logs.
+
+config HUAWEI_KEY_TEST
+	bool "HUAWEI auto key test driver"
+	depends on HUAWEI_KERNEL
+	default y
+	help
+	  Select Y if use auto key test.
+
+config HUAWEI_SMEM_SLEEP_LOG
+	bool "HUAWEI smem sleep log driver"
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	  Select Y if use smem sleep log driver.
+
+config HUAWEI_KERNEL_DEBUG
+	bool "HUAWEI kernel debug"
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	  Select Y if print HUAWEI log

@@ -1,0 +1,16 @@
+
+#
+# RSM configuration.
+#
+
+config HUAWEI_HUNGTASK
+	tristate "Huawei RSM module support"
+	depends on !DETECT_HUNG_TASK
+	default n
+	---help---
+	  If you say M here you open RSM as an insertable module.
+	  This module check proccess in D status periodly(the period can be defined by user),
+	  except some proccess(these proccesses not be checked is also defined by user), 
+	  if [ nvcsw + nivcsw ] in task_struct is equal to last switch count,
+	  RSM module will treat it as a proccess in deadlock.
+	  

@@ -72,8 +72,34 @@ static const char *ch_name[RMNET_DEVICE_COUNT] = {
 /* XXX should come from smd headers */
 #define SMD_PORT_ETHER0 11
 
+#ifdef CONFIG_HUAWEI_KERNEL
+/*****************************************************************************
+ Function    : rmnet_get_max_mtu
+ Description  : get the max mtu, now return 1410, 
+                the value should be config by different product.
+ Input        : void  
+ Output       : None
+ Return Value : 
+ Calls        : 
+ Called By    : 
+ 
+  History        :
+  1.Date         : 2011/12/16
+    Author       : yuanjintao
+    Modification : Created function
+
+*****************************************************************************/
+int rmnet_get_max_mtu(void)
+{
+    return RMNET_DEFAULT_MAX_MTU;
+}
+
+#define RMNET_DATA_LEN (rmnet_get_max_mtu())
+
+#else
 /* allow larger frames */
 #define RMNET_DATA_LEN 2000
+#endif
 
 #define HEADROOM_FOR_QOS    8
 

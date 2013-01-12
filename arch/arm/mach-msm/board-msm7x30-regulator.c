@@ -284,10 +284,13 @@ static struct proccomm_regulator_info msm7x30_pcom_vreg_info[] = {
 	PCOM_VREG_LDO(ldo05, 18, NULL,  2850000,  2850000, 0, -1, 0, 0, 0, 0),
 	PCOM_VREG_LDO(ldo06, 16, NULL,  3075000,  3400000, 0, -1, 0, 0, 0, 0),
 	PCOM_VREG_LDO(ldo07, 44, NULL,  1800000,  1800000, 0, -1, 0, 0, 0, 0),
-	PCOM_VREG_LDO(ldo08, 32, NULL,  1800000,  1800000, 0, -1, 0, 0, 0, 0),
+	/*fengwei begin*/
+	/* modified for huawei driver voltage regulator */
+	PCOM_VREG_LDO(ldo08, 32, NULL,  1800000,  2850000, 0, -1, 0, 0, 0, 0),
 	PCOM_VREG_LDO(ldo09,  8, NULL,  2050000,  2050000, 0, -1, 0, 0, 0, 0),
-	PCOM_VREG_LDO(ldo10,  7, NULL,  2600000,  2600000, 0, -1, 0, 0, 0, 0),
-	PCOM_VREG_LDO(ldo11, 21, NULL,  2600000,  2600000, 0, -1, 0, 0, 0, 0),
+	PCOM_VREG_LDO(ldo10,  7, NULL,  2600000,  2700000, 0, -1, 0, 0, 0, 0),
+	PCOM_VREG_LDO(ldo11, 21, NULL,  1800000,  2600000, 0, -1, 0, 0, 0, 0),
+	/*fengwei end*/
 	PCOM_VREG_LDO(ldo12, 34, NULL,  1800000,  1800000, 0, -1, 0, 0, 0, 0),
 	PCOM_VREG_LDO(ldo13, 15, NULL,  2900000,  3050000, 0, -1, 0, 0, 0, 0),
 	PCOM_VREG_LDO(ldo14, 24, NULL,  2850000,  2850000, 0, -1, 0, 0, 0, 0),

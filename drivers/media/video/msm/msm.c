@@ -2796,7 +2796,10 @@ static int msm_open_config(struct inode *inode, struct file *fp)
 	struct msm_cam_config_dev *config_cam = container_of(inode->i_cdev,
 		struct msm_cam_config_dev, config_cdev);
 	D("%s: open %s\n", __func__, fp->f_path.dentry->d_name.name);
-
+	if(!config_cam) {
+		pr_err("msm_open_config NULL config_cam\n");	
+		return -ENODEV;
+		}
 	rc = nonseekable_open(inode, fp);
 	if (rc < 0) {
 		pr_err("%s: nonseekable_open error %d\n", __func__, rc);
@@ -2806,8 +2809,17 @@ static int msm_open_config(struct inode *inode, struct file *fp)
 
 	/*config_cam->isp_subdev = g_server_dev.pcam_active->mctl.isp_sdev;*/
 	/* assume there is only one active camera possible*/
+	if(!g_server_dev.pcam_active){
+		pr_err("msm_open_config NULL pcam_active\n");
+		return -ENODEV;
+		}
 	config_cam->p_mctl =
 		msm_camera_get_mctl(g_server_dev.pcam_active->mctl_handle);
+		
+	if(!config_cam->p_mctl){
+		pr_err("msm_open_config NULL p_mctl\n");
+		return -ENODEV;
+		}
 
 	INIT_HLIST_HEAD(&config_cam->p_mctl->stats_info.pmem_stats_list);
 	spin_lock_init(&config_cam->p_mctl->stats_info.pmem_stats_spinlock);

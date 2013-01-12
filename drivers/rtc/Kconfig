@@ -1169,4 +1169,8 @@ config RTC_DRV_LOONGSON1
 	  This driver can also be built as a module. If so, the module
 	  will be called rtc-ls1x.
 
+config  HUAWEI_FEATURE_POWEROFF_ALARM
+	bool "HUAWEI PowerOff Alarm"
+	depends on HUAWEI_KERNEL
+	default n
 endif # RTC_CLASS

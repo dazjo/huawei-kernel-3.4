@@ -315,9 +315,12 @@ enum {
 
 	/* screen: blanked,   hsync: off, vsync: on */
 	FB_BLANK_HSYNC_SUSPEND = VESA_HSYNC_SUSPEND + 1,
-
 	/* screen: blanked,   hsync: off, vsync: off */
-	FB_BLANK_POWERDOWN     = VESA_POWERDOWN + 1
+	FB_BLANK_POWERDOWN     = VESA_POWERDOWN + 1, 
+#ifdef CONFIG_HUAWEI_KERNEL   
+	/* The cmd for power down charge to resume LCD */
+	FB_BLANK_PWDN_GHG_RESUME     = 5,
+#endif
 };
 
 #define FB_VBLANK_VBLANKING	0x001	/* currently in a vertical blank */

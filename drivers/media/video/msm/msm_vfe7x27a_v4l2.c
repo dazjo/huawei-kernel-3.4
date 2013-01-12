@@ -412,8 +412,8 @@ static void vfe_7x_ops(void *driver_data, unsigned id, size_t len,
 	struct msm_free_buf *free_buf = NULL;
 	struct vfe_outputack fack;
 	int i;
-
-	CDBG("%s:id=%d\n", __func__, id);
+    /* apply a qualcomm patch */
+	//pr_info("%s:id=%d\n", __func__, id);
 	if (id != VFE_ADSP_EVENT) {
 		data = kzalloc(len, GFP_ATOMIC);
 		if (!data) {
@@ -1427,7 +1427,8 @@ static long msm_vfe_subdev_ioctl(struct v4l2_subdev *sd,
 		break;
 	case CMD_GENERAL:
 	case CMD_STATS_DISABLE: {
-		CDBG("CMD_GENERAL:%d %d\n", vfecmd.id, vfecmd.length);
+        /* apply a qualcomm patch */
+		//pr_info("CMD_GENERAL:%d %d\n", vfecmd.id, vfecmd.length);
 		if (vfecmd.id == VFE_CMD_OPERATION_CFG) {
 			if (copy_from_user(&vfe2x_ctrl->start_cmd,
 						(void __user *)(vfecmd.value),
@@ -1490,8 +1491,9 @@ static long msm_vfe_subdev_ioctl(struct v4l2_subdev *sd,
 			rc = -EFAULT;
 			goto config_done;
 		}
-		CDBG("%s %s\n", cmds_map[vfecmd.id].isp_id_name,
-			cmds_map[vfecmd.id].vfe_id_name);
+        /* apply a qualcomm patch */
+		//pr_info("%s %s\n", cmds_map[vfecmd.id].isp_id_name,
+			//cmds_map[vfecmd.id].vfe_id_name);
 		*(uint32_t *)cmd_data = header;
 		if (queue == QDSP_CMDQUEUE) {
 			switch (vfecmd.id) {

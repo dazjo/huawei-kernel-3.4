@@ -10,27 +10,129 @@ config MSM_CAMERA_V4L2
           and /dev/control0.
 
 comment "Camera Sensor Selection"
+config HUAWEI_CAMERA
+	bool "HUAWEI_CAMERA "
+	depends on MSM_CAMERA && !ARCH_MSM8X60 && !ARCH_MSM8960 && !MSM_CAMERA_V4L2
+	default n
+	---help---
+	  Huawei Camera 
+config HUAWEI_CAMERA_SENSOR_S5K5CA
+	tristate "s5k5ca is used"
+	default n
+	help
+	if Y ,select HUAWEI_CAMERA_SENSOR_S5K5CA
+config HUAWEI_CAMERA_SENSOR_MT9T113
+	tristate "mt9t113 is used"
+	default n
+	help
+	if Y ,select HUAWEI_CAMERA_SENSOR_MT9T113
 config MT9T013
 	bool "Sensor mt9t013 (BAYER 3M)"
 	depends on MSM_CAMERA && !ARCH_MSM8X60 && !ARCH_MSM8960 && !MSM_CAMERA_V4L2
 	default y
 	---help---
 	  MICRON 3M Bayer Sensor with AutoFocus
-config MT9D113
+config HUAWEI_CAMERA_SENSOR_MT9D113
 	bool "Sensor mt9d113 (YUV 2M)"
-	depends on MSM_CAMERA && ARCH_MSM8X60 && !MSM_CAMERA_V4L2
-	default y
+	default n
 	---help---
 	  MICRON 2M YUV Sensor
 	  This sensor is the front camera on QT8660.
 	  This uses csi mipi interface.
 	  This sensor is used only on QT device.
+config HUAWEI_CAMERA_SENSOR_MT9V113
+	tristate "mt9v113 is used"
+	default n
+	help
+	if Y ,select HUAWEI_CAMERA_SENSOR_MT9V113
+config HUAWEI_CAMERA_SENSOR_GC0313
+	tristate "gc0313 is used"
+	default n
+	help
+	if Y ,select HUAWEI_CAMERA_SENSOR_GC0313
+config HUAWEI_CAMERA_SENSOR_BF3905
+	tristate "bf3905 is used"
+	default n
+	help
+	if Y ,select HUAWEI_CAMERA_SENSOR_BF3905
 config MT9D112
 	bool "Sensor mt9d112 (YUV 2M)"
 	depends on MSM_CAMERA && !ARCH_MSM8X60 && !ARCH_MSM8960 && !MSM_CAMERA_V4L2
 	default y
 	---help---
 	  MICRON 2M YUV Sensor
+config  HUAWEI_CAMERA
+	bool "Select huawei camera"
+	depends on MSM_CAMERA
+	depends on HUAWEI_KERNEL
+	default n
+	---help---
+	  Select huawei camera
+
+config HUAWEI_SENSOR_HI701
+	bool "Sensor Hynix (YUV 30W)"
+	depends on HUAWEI_CAMERA
+	default n
+	---help---
+	  Hynix 30w YUV Sensor
+
+config HUAWEI_SENSOR_OV7690
+	bool "Sensor ov7690 (YUV 30K)"
+	depends on HUAWEI_CAMERA
+	default n
+	---help---
+	  MICRON 30k YUV Sensor
+
+
+config HUAWEI_SENSOR_OV7736
+	bool "Sensor ov7736 (YUV 30W)"
+	depends on HUAWEI_CAMERA
+	default n
+	---help---
+	  MICRON 30W YUV Sensor
+	  
+config HUAWEI_SENSOR_HIMAX0356
+	bool "Sensor himax (YUV 30W)"
+	depends on HUAWEI_CAMERA
+	default n
+	---help---
+	  HIMAX 30w YUV Sensor
+
+config HUAWEI_SENSOR_MT9D113
+	bool "Sensor Aptina (YUV 200W)"
+	depends on HUAWEI_CAMERA
+	default n
+	---help---
+	  Aptina 200w YUV Sensor
+
+config HUAWEI_SENSOR_MT9V114
+	bool "Sensor Aptina (YUV 30W)"
+	depends on HUAWEI_CAMERA
+	default n
+	---help---
+	  Aptina 30w YUV Sensor
+	  
+#/* delte macro CONFIG_HUAWEI_SENSOR_S5K4E1GX*/
+config HUAWEI_SENSOR_MT9P017
+	bool "Sensor mt9p017 (BAYER 5M)"
+	depends on HUAWEI_CAMERA
+	default n
+	---help---
+	  Sunny 5M Bayer Sensor with AutoFocus
+	  	  
+	  
+config HUAWEI_SENSOR_OV5647_SUNNY
+	bool "Sensor ov5647_sunny (BAYER 5M)"
+	depends on HUAWEI_CAMERA
+	default n
+	---help---
+	  MICRON 5M Bayer Sensor with AutoFocus
+config HUAWEI_FEATURE_RIGHT_TPA2028D1_AMPLIFIER
+	tristate "right tpa2028d1 amplifier"
+	depends on HUAWEI_KERNEL
+	default y
+	---help---
+	  tpa2028d1 amplifier used for audio.
 config IMX074
 	bool "Sensor IMX074 (BAYER 13.5M)"
 	depends on MSM_CAMERA
@@ -130,6 +232,13 @@ config MT9E013
 	---help---
 	  Aptina 8M Bayer Sensor modules with Autofocus
 
+config HUAWEI_SENSOR_MT9E013
+	bool "Sensor mt9e013 module (BAYER 8M)"
+	depends on HUAWEI_CAMERA
+	default y
+	---help---
+	  Aptina 8M Bayer Sensor modules with Autofocus
+
 config IMX074_ACT
 	bool "Actuator IMX074 (BAYER 13.5M)"
 	depends on MSM_CAMERA
@@ -150,7 +259,7 @@ config QS_S5K4E1
 	---help---
 	  Samsung 5M with Autofocus
 
-config S5K4E1
+config HUAWEI_SENSOR_S5K4E1
 	bool "Sensor Sensor s5k4e1 (Samsung 5M)"
 	depends on MSM_CAMERA
 	default n
@@ -159,7 +268,33 @@ config S5K4E1
 	  It is a Bayer 5MP sensor with auto focus and it supports
 	  two mipi lanes, required for msm7x2xA platform.
 	  Say Y here if this is msm7x2xA variant platform.
-
+config HUAWEI_CAMERA_SENSOR_IMX105
+	bool "Sensor imx105 (SUNNY 8M)"
+	depends on MSM_CAMERA
+	default n
+	---help---
+	  Support for IMX105 sunnsy sensor driver.
+	  It is a Bayer 8MP sensor with auto focus and it supports
+	  two mipi lanes, required for msm7x2xA platform.
+	  Say Y here if this is msm7x2xA variant platform.
+config HUAWEI_CAMERA_SENSOR_S5K3H2
+	bool "Sensor sk53h2 (LITEON 8M)"
+	depends on MSM_CAMERA
+	default n
+	---help---
+	  Support for S5K3H2 sunnsy sensor driver.
+	  It is a Bayer 8MP sensor with auto focus and it supports
+	  two mipi lanes, required for msm7x2xA platform.
+	  Say Y here if this is msm7x2xA variant platform.
+config HUAWEI_CAMERA_SENSOR_HI542
+	bool "Sensor hi542 (SUNNY 5M)"
+	depends on MSM_CAMERA
+	default n
+	---help---
+	  Support for HI542 sunny sensor driver.
+	  It is a Bayer 5MP sensor without auto focus and it supports
+	  two mipi lanes, required for msm8x25 platform.
+	  Say Y here if this is msm8x25 variant platform.
 config DW9712_ACT
 	bool "Lens actuator dw9721"
 	depends on MSM_CAMERA && S5K4E1
@@ -220,6 +355,19 @@ config MSM_CAMERA_FLASH
 	default y
 	---help---
 	  Enable support for LED flash for msm camera
+
+config HUAWEI_FEATURE_TPS61310
+	tristate "TPS61310"
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	  tps61310 LED camera flash and video light
+config HW_TORCH
+	bool "HUAWEI torch support"
+	depends on MSM_CAMERA_FLASH
+	default n
+	---help---
+	  Enable support for LED flash for torch
 
 config MSM_CAMERA_SENSOR
 	bool "Qualcomm MSM camera sensor support"

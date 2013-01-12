@@ -144,7 +144,12 @@ static struct device_attribute power_supply_attrs[] = {
 	POWER_SUPPLY_ATTR(voltage_min),
 	POWER_SUPPLY_ATTR(voltage_max_design),
 	POWER_SUPPLY_ATTR(voltage_min_design),
-	POWER_SUPPLY_ATTR(voltage_now),
+#ifndef CONFIG_HUAWEI_KERNEL	
+    POWER_SUPPLY_ATTR(voltage_now),
+#else
+    /* write value of baterry voltage to file named batt_vol */
+    POWER_SUPPLY_ATTR(batt_vol),
+#endif
 	POWER_SUPPLY_ATTR(voltage_avg),
 	POWER_SUPPLY_ATTR(current_max),
 	POWER_SUPPLY_ATTR(current_now),

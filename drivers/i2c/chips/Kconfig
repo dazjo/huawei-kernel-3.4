@@ -1,0 +1,49 @@
+#
+# Miscellaneous I2C chip drivers configuration
+#
+# *** DEPRECATED! Do not add new entries! See Makefile ***
+#
+
+menu "Miscellaneous I2C Chip support"
+
+config SENSORS_MT9T013
+	tristate "MT9T013 Camera Driver"
+	depends on I2C
+	default y
+	help
+	 MT9T013 Camera Driver implemented by HTC.
+
+config HUAWEI_FEATURE_TPA2028D1_AMPLIFIER
+	tristate "tpa2028d1 amplifier"
+	depends on HUAWEI_KERNEL
+	default y
+	help
+	 tpa2028d1 amplifier used for audio.
+
+config HUAWEI_FEATURE_SENSORS_ST_LSM303DLH
+	tristate "LSM303DLH is a 6D sensors(gs&ms)"
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	 The LSM303DLH is a system-in-package featuring a 3D
+	 digital linear acceleration sensor and a 3D digital magnetic sensor.
+config HUAWEI_FEATURE_SENSORS_AK8975
+	tristate "AK8975"
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	  If you say yes here you get support for Asahi Kasei's 
+	  orientation sensor AK8975.
+config QWERTY_KEYPAD_ADP5587
+	tristate "Qwerty Keypad Controller Driver"
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	 Driver for Qwerty Keypad Controller Driver.
+config HUAWEI_FEATURE_SENSORS_AK8963
+	tristate "AK8963 compass support"
+	default n
+	help
+	  If you say yes here you get support for Asahi Kasei's
+	  orientation sensor AK8963.
+endmenu

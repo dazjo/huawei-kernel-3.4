@@ -186,6 +186,13 @@ static int block2mtd_write(struct mtd_info *mtd, loff_t to, size_t len,
 	return err;
 }
 
+/* for support the unification of emmc and nand */ 
+#ifdef CONFIG_HUAWEI_APANIC
+static int block2mtd_isbad(struct mtd_info *mtd, loff_t ofs)
+{
+    return 0;
+}
+#endif	
 
 /* sync the device - wait until the write queue is empty */
 static void block2mtd_sync(struct mtd_info *mtd)
@@ -257,7 +264,13 @@ static struct block2mtd_dev *add_device(char *devname, int erase_size)
 
 	/* Setup the MTD structure */
 	/* make the name contain the block device in */
+
+	/* for support the unification of emmc and nand */ 
+    #ifndef CONFIG_HUAWEI_APANIC
 	name = kasprintf(GFP_KERNEL, "block2mtd: %s", devname);
+    #else
+	name = kasprintf(GFP_KERNEL, "MTD-Crash");
+    #endif	
 	if (!name)
 		goto devinit_err;
 
@@ -265,12 +278,19 @@ static struct block2mtd_dev *add_device(char *devname, int erase_size)
 
 	dev->mtd.size = dev->blkdev->bd_inode->i_size & PAGE_MASK;
 	dev->mtd.erasesize = erase_size;
+    #ifndef CONFIG_HUAWEI_APANIC
 	dev->mtd.writesize = 1;
-	dev->mtd.writebufsize = PAGE_SIZE;
+    #else
+	dev->mtd.writesize = PAGE_SIZE/2 ;
+    #endif	
 	dev->mtd.type = MTD_RAM;
 	dev->mtd.flags = MTD_CAP_RAM;
 	dev->mtd._erase = block2mtd_erase;
 	dev->mtd._write = block2mtd_write;
+    #ifdef CONFIG_HUAWEI_APANIC
+	dev->mtd._panic_write = block2mtd_write;
+    dev->mtd._block_isbad = block2mtd_isbad;
+    #endif	
 	dev->mtd._writev = mtd_writev;
 	dev->mtd._sync = block2mtd_sync;
 	dev->mtd._read = block2mtd_read;

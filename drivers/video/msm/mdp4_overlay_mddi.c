@@ -32,7 +32,9 @@
 #include "mdp.h"
 #include "msm_fb.h"
 #include "mdp4.h"
-
+#ifdef CONFIG_HUAWEI_KERNEL
+#include <linux/hardware_self_adapt.h>
+#endif
 static struct mdp4_overlay_pipe *mddi_pipe;
 static struct msm_fb_data_type *mddi_mfd;
 static int busy_wait_cnt;
@@ -87,6 +89,56 @@ void mdp4_mddi_vsync_enable(struct msm_fb_data_type *mfd,
 		MDP_OUTP(MDP_BASE + 0x20c, data);
 	}
 }
+/* Config MDP reg according bpp ,the interface for 
+ * dma_s pipe or dma_p(overlay) pipe.
+ */
+#ifdef CONFIG_FB_MSM_BPP_SWITCH
+void mdp4_dma_s_update_lcd(struct msm_fb_data_type *mfd,
+				struct mdp4_overlay_pipe *pipe);
+void mdp4_switch_bpp_config(struct msm_fb_data_type *mfd,uint32 bpp)
+{
+    uint32 mddi_ld_param;
+    uint16 mddi_vdo_packet_reg;
+    mfd->panel_info.bpp = bpp;    
+    printk(KERN_ERR "%s: switch bpp into %d\n", __func__,bpp);
+    if(24 == bpp)
+    {
+       mdp4_dma_s_update_lcd(mfd,mddi_pipe); 
+    }
+    else if (16 == bpp)
+    {
+        mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_ON, FALSE);
+        mddi_ld_param = 0;
+        mddi_vdo_packet_reg = mfd->panel_info.mddi.vdopkt;
+        if (mfd->panel_info.type == MDDI_PANEL) {
+        	if (mfd->panel_info.pdest == DISPLAY_1)
+        		mddi_ld_param = 0;
+        	else
+        		mddi_ld_param = 1;
+        } else {
+        	mddi_ld_param = 2;
+        }
+
+        MDP_OUTP(MDP_BASE + 0x00090, mddi_ld_param);
+        /* config registers base on bpp(16 ,24 or other) */
+        if (mfd->panel_info.bpp == 24)
+        	MDP_OUTP(MDP_BASE + 0x00094,
+        	 (MDDI_VDO_PACKET_DESC_24 << 16) | mddi_vdo_packet_reg);
+        else if (mfd->panel_info.bpp == 16)
+        	MDP_OUTP(MDP_BASE + 0x00094,
+        	 (MDDI_VDO_PACKET_DESC_16 << 16) | mddi_vdo_packet_reg);
+        else
+        	MDP_OUTP(MDP_BASE + 0x00094,
+        	 (MDDI_VDO_PACKET_DESC << 16) | mddi_vdo_packet_reg);
+
+        MDP_OUTP(MDP_BASE + 0x00098, 0x01);
+        mdp4_overlay_dmap_cfg(mfd, 0);
+        mdp_pipe_ctrl(MDP_CMD_BLOCK, MDP_BLOCK_POWER_OFF, FALSE);
+    }
+    else 
+        return;    
+}
+#endif
 
 #define WHOLESCREEN
 
@@ -533,7 +585,11 @@ void mdp4_mddi_dma_busy_wait(struct msm_fb_data_type *mfd)
 	if (need_wait) {
 		/* wait until DMA finishes the current job */
 		pr_debug("%s: PENDING, pid=%d\n", __func__, current->pid);
+#ifdef CONFIG_HUAWEI_KERNEL
+        wait_for_completion_interruptible_timeout(&mfd->dma->comp, 1 * HZ);
+#else
 		wait_for_completion(&mfd->dma->comp);
+#endif
 	}
 	pr_debug("%s: DONE, pid=%d\n", __func__, current->pid);
 }
@@ -565,7 +621,7 @@ void mdp4_mddi_kickoff_video(struct msm_fb_data_type *mfd,
 void mdp4_mddi_kickoff_ui(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe)
 {
-	pr_debug("%s: pid=%d\n", __func__, current->pid);
+    /*delete some lines*/
 	mdp4_mddi_overlay_kickoff(mfd, pipe);
 }
 
@@ -574,6 +630,13 @@ void mdp4_mddi_overlay_kickoff(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe)
 {
 	unsigned long flag;
+/* use dma_p(overlay) pipe ,change bpp into 16 */
+#ifdef CONFIG_FB_MSM_BPP_SWITCH
+	if(16 != mfd->panel_info.bpp)
+	{
+		mdp4_switch_bpp_config(mfd,16);	
+	}
+#endif
 
 	mdp_enable_irq(MDP_OVERLAY0_TERM);
 	spin_lock_irqsave(&mdp_spin_lock, flag);
@@ -658,6 +721,13 @@ void mdp4_dma_s_update_lcd(struct msm_fb_data_type *mfd,
 void mdp4_mddi_dma_s_kickoff(struct msm_fb_data_type *mfd,
 				struct mdp4_overlay_pipe *pipe)
 {
+/* use dma_s pipe ,change bpp into 24 */
+#ifdef CONFIG_FB_MSM_BPP_SWITCH
+	if(24 != mfd->panel_info.bpp)
+	{
+		mdp4_switch_bpp_config(mfd,24);	
+	}
+#endif
 	mdp_enable_irq(MDP_DMA_S_TERM);
 
 	if (mddi_pipe->ov_blt_addr == 0)
@@ -669,7 +739,12 @@ void mdp4_mddi_dma_s_kickoff(struct msm_fb_data_type *mfd,
 	mdp4_stat.kickoff_dmas++;
 
 	/* wait until DMA finishes the current job */
+#ifdef CONFIG_HUAWEI_KERNEL
+    /* huawei modify */
+	wait_for_completion_interruptible_timeout(&mfd->dma->comp, 2 * HZ);
+#else
 	wait_for_completion(&mfd->dma->comp);
+#endif
 	mdp_disable_irq(MDP_DMA_S_TERM);
 }
 

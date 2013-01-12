@@ -208,5 +208,13 @@ static inline int notifier_to_errno(int ret)
 
 extern struct blocking_notifier_head reboot_notifier_list;
 
+#ifdef CONFIG_SRECORDER_MSM
+#ifdef CONFIG_SRECORDER_POWERCOLLAPS
+#ifndef CONFIG_KPROBES
+extern struct raw_notifier_head emergency_reboot_notifier_list;
+#endif
+#endif /* CONFIG_SRECORDER_POWERCOLLAPS */
+#endif /* CONFIG_SRECORDER_MSM */
+
 #endif /* __KERNEL__ */
 #endif /* _LINUX_NOTIFIER_H */

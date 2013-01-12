@@ -611,6 +611,26 @@ out:
 	mmc_free_ext_csd(bw_ext_csd);
 	return err;
 }
+#ifdef CONFIG_HUAWEI_KERNEL 
+static ssize_t mmc_samsung_smart(struct device *dev, 
+                                            struct device_attribute *attr, char *buf) 
+{ 
+    struct mmc_card *card = mmc_dev_to_card(dev); 
+    unsigned int size = PAGE_SIZE; 
+    unsigned int wrote; 
+
+    if (card->quirks & MMC_QUIRK_SAMSUNG_SMART) 
+    {
+        return mmc_samsung_smart_handle(card, buf); 
+    }
+    else
+    {
+        wrote = scnprintf(buf, size, "This eMMC is not provided by Samsung, only Samsung eMMC support this feature!\n"); 
+        return wrote;
+    }
+} 
+static DEVICE_ATTR(samsung_smart, S_IRUGO, mmc_samsung_smart, NULL); 
+#endif /* CONFIG_HUAWEI_KERNEL */ 
 
 MMC_DEV_ATTR(cid, "%08x%08x%08x%08x\n", card->raw_cid[0], card->raw_cid[1],
 	card->raw_cid[2], card->raw_cid[3]);
@@ -643,6 +663,9 @@ static struct attribute *mmc_std_attrs[] = {
 	&dev_attr_serial.attr,
 	&dev_attr_enhanced_area_offset.attr,
 	&dev_attr_enhanced_area_size.attr,
+#ifdef CONFIG_HUAWEI_KERNEL 
+    &dev_attr_samsung_smart.attr, 
+#endif 
 	NULL,
 };
 
@@ -817,6 +840,15 @@ err:
 	return err;
 }
 
+#ifdef CONFIG_HUAWEI_KERNEL 
+static const struct mmc_fixup mmc_fixups[] = { 
+    /* Provide access to Samsung's e-MMC Smart Report via sysfs */
+    MMC_FIXUP(CID_NAME_ANY, 0x15, CID_OEMID_ANY, add_quirk_mmc, MMC_QUIRK_SAMSUNG_SMART), 
+
+    END_FIXUP 
+    }; 
+#endif 
+
 /*
  * Handle the detection and initialisation of a card.
  *
@@ -923,6 +955,13 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		err = mmc_decode_cid(card);
 		if (err)
 			goto free_card;
+
+#ifdef CONFIG_HUAWEI_KERNEL 
+        /* Detect on first access quirky cards that need help when 
+         * powered-on 
+         */ 
+        mmc_fixup_device(card, mmc_fixups);   
+#endif
 	}
 
 	/*
@@ -1072,6 +1111,10 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		max_dtr = card->csd.max_dtr;
 	}
 
+#ifdef CONFIG_HUAWEI_KERNEL
+	/* Set clk to 26MHz to fix hynix emmc CMD6 timeout issue. */
+	mmc_set_clock(host, MMC_HIGH_26_MAX_DTR);
+#endif
 	mmc_set_clock(host, max_dtr);
 
 	/*
@@ -1414,6 +1457,19 @@ static void mmc_detect(struct mmc_host *host)
 }
 
 /*
+ * Restore ios setting
+ */
+#ifndef CONFIG_HUAWEI_KERNEL
+static void mmc_restore_ios(struct mmc_host *host)
+{
+	BUG_ON(!host);
+
+	memcpy(&host->ios, &host->saved_ios, sizeof(struct mmc_ios));
+	mmc_set_ios(host);
+}
+#endif
+
+/*
  * Suspend callback from host.
  */
 static int mmc_suspend(struct mmc_host *host)
@@ -1463,7 +1519,19 @@ static int mmc_resume(struct mmc_host *host)
 	BUG_ON(!host->card);
 
 	mmc_claim_host(host);
+	
+	/*Hynic mmc cannot wakeup using awake function, fix it temporarily*/
+#ifndef CONFIG_HUAWEI_KERNEL
+	
+	if (mmc_card_is_sleep(host->card)) {
+		mmc_restore_ios(host);
+		err = mmc_card_awake(host);
+	} else
+		err = mmc_init_card(host, host->ocr, host->card);
+#else
+	printk("call mmc_init_card instead of awake\n");
 	err = mmc_init_card(host, host->ocr, host->card);
+#endif
 	mmc_release_host(host);
 
 	return err;

@@ -1047,10 +1047,14 @@ int
 fb_blank(struct fb_info *info, int blank)
 {	
  	int ret = -EINVAL;
-
+#ifdef CONFIG_HUAWEI_KERNEL   
+ 	if (blank > FB_BLANK_PWDN_GHG_RESUME)
+ 		blank = FB_BLANK_PWDN_GHG_RESUME;
+#else
  	if (blank > FB_BLANK_POWERDOWN)
  		blank = FB_BLANK_POWERDOWN;
-
+    
+#endif
 	if (info->fbops->fb_blank)
  		ret = info->fbops->fb_blank(blank, info);
 

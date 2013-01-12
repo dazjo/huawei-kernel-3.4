@@ -226,10 +226,43 @@ int msm_dmov_exec_cmd(unsigned id, unsigned int cmdptr);
 #define DMOV_NAND_CRCI_CMD    5
 #define DMOV_NAND_CRCI_DATA   4
 
+/*
+ * Four sdcc slots share the same dma channel.
+ * This slot is for sd which will be pluged in/out randomly
+ * According to Qcomm's manual:
+ *     "Host initiated flush operations only terminate the top-level pointer that is currently being executed.
+ *     If a second top-level pointer is valid, it will not be affected by the flush. On the other hand, a flush
+ *     due to an error condition will flush all top-level pointers."
+ * When sd is pluged out ,error condition will be trigged and the dma channel is flushed.If at the same time,there is
+ * a pending dma request for emmc which will be flushed too, and which will cause the partition damaged on the the emmc.
+ * So we allocate a seperate dma channel for sd slot here to avoid this question.
+ *
+ * On the 8X25 platform SDC1 is for sd card. We use channel 10 for sd card on 8X25 platform.
+ */
+#ifdef CONFIG_HUAWEI_KERNEL
+#ifdef CONFIG_ARCH_MSM8625
+#define DMOV_SDC1_CHAN        10
+#else
 #define DMOV_SDC1_CHAN        8
+#endif
+#else
+#define DMOV_SDC1_CHAN        8
+#endif
 #define DMOV_SDC1_CRCI        6
 
+/* 
+ * Separate the DMA channel of eMMC, sd card and WIFI.
+ * Fix the DMA flushing destroy ext4 file system issue.
+ */
+#ifdef CONFIG_HUAWEI_KERNEL
+#ifdef CONFIG_ARCH_MSM8625
+#define DMOV_SDC2_CHAN        7
+#else
 #define DMOV_SDC2_CHAN        8
+#endif
+#else
+#define DMOV_SDC2_CHAN        8
+#endif
 #define DMOV_SDC2_CRCI        7
 
 #define DMOV_SDC3_CHAN        8
@@ -237,10 +270,9 @@ int msm_dmov_exec_cmd(unsigned id, unsigned int cmdptr);
 
 #define DMOV_SDC4_CHAN        8
 #define DMOV_SDC4_CRCI        13
-
+/*DMA channel num 10 is assigned for sd card, because of CONFIG_TSIF is not set on soc MSM8625*/
 #define DMOV_TSIF_CHAN        10
 #define DMOV_TSIF_CRCI        10
-
 #define DMOV_USB_CHAN         11
 
 #define DMOV_HSUART1_TX_CHAN   4

@@ -210,6 +210,200 @@ struct msm_rpc_client *oem_rapi_client_init(void)
 }
 EXPORT_SYMBOL(oem_rapi_client_init);
 
+
+/* usb rpc to replace pcom mechanism for fix reset issue */
+#ifdef CONFIG_HUAWEI_KERNEL
+#define HUAWEI_OEM_RAPI_SET_NV 101
+#define HUAWEI_OEM_RAPI_GET_NV 102
+
+/*
+ * the oem_rapi_client_streaming call back function
+ * copy the size and output to the output buffer
+ * the caller must ensure the pointer not be NULL.
+ */
+static int oem_rapi_client_streaming_cb_func(
+    struct oem_rapi_client_streaming_func_cb_arg *arg,
+    struct oem_rapi_client_streaming_func_cb_ret *ret)
+{
+    uint32_t size;
+
+    size = (arg->in_len < OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE) ?
+        arg->in_len : OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE;
+
+    if (ret->out_len != 0)
+        *ret->out_len = size;
+
+    if (ret->output != 0)
+        memcpy(ret->output, arg->input, size);
+
+    return 0;
+}
+
+/*
+ * the oem_rapi_client_streaming write nv function
+ * it can be used to all kernel file
+ * the caller must ensure the pointer not be NULL.
+ */
+nv_stat_enum_type oem_rapi_write_nv(u16 nv, void *buf, u8 size)
+{
+    struct msm_rpc_client *client;
+    char input[OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE];
+    struct oem_rapi_client_streaming_func_arg client_arg;
+    struct oem_rapi_client_streaming_func_ret client_ret;
+    int ret=0;
+
+    /* check the nv size */
+    printk("%s: nv=%d buf size(%d)\n", __func__, nv, size);
+    if ((size+sizeof(nv)) >= OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE)
+    {
+        printk("%s: buf size(%d) is too large\n", __func__, size);
+        return NV_BADPARM_S;
+    }
+    
+    /* init the oem rapi client, it only init once */
+    client = oem_rapi_client_init();
+    if (IS_ERR(client)) 
+    {
+        printk("%s: couldn't open oem rapi client\n", __func__);
+        return NV_RPC_ERROR_S;
+    } 
+    else
+    {
+        printk("%s: connected to remote oem rapi server\n", __func__);
+    }
+
+    /* clear the buffer */
+    memset(input, 0, OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE);
+    /* set the nv item value */
+    memcpy(input, &nv, sizeof(nv));
+    /* set the nv item len */
+    input[sizeof(nv)] = size;
+    /* set the nv item data */
+    memcpy(input+sizeof(nv)+sizeof(size), buf, size);
+
+    /* set the client_arg data */
+    client_arg.event = HUAWEI_OEM_RAPI_SET_NV;
+    client_arg.cb_func = oem_rapi_client_streaming_cb_func;
+    client_arg.handle = 0;
+    client_arg.in_len = OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE;
+    client_arg.input = input;
+    client_arg.out_len_valid = 1;// 0:invalid; 1:valid
+    client_arg.output_valid = 1;// 0:invalid; 1:valid
+    client_arg.output_size = OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE;
+    client_ret.out_len = 0;
+    client_ret.output = 0;
+
+    /* call the rpc to get the modem data */
+    ret = oem_rapi_client_streaming_function(client, &client_arg, &client_ret);
+    printk("%s: oem_rapi_client_streaming_function result=%d\n", __func__, ret);
+
+    /* check the result */
+    if (0 == ret)  
+    {
+        if (0 != *client_ret.out_len)   
+        {
+            ret = *client_ret.output;
+        }
+        else
+        {
+            ret = NV_RPC_ERROR_S;
+        }
+        printk("%s: out_len=%d ret=%d\n", __func__, *(client_ret.out_len), ret);
+    }
+
+    kfree(client_ret.out_len);
+    kfree(client_ret.output);
+
+    return (nv_stat_enum_type)ret;
+}
+
+/*
+ * the oem_rapi_client_streaming read nv function
+ * it can be used to all kernel file
+ * the caller must ensure the pointer not be NULL.
+ */
+nv_stat_enum_type oem_rapi_read_nv(u16 nv, void *buf, u8 size)
+{
+    struct msm_rpc_client *client;
+    char input[OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE];
+    struct oem_rapi_client_streaming_func_arg client_arg;
+    struct oem_rapi_client_streaming_func_ret client_ret;
+    int ret=0;
+
+    /* check the nv size */
+    printk("%s: nv=%d buf size(%d)\n", __func__, nv, size);
+    if ((size+sizeof(nv)) >= OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE)
+    {
+        printk("%s: buf size(%d) is too large\n", __func__, size);
+        return NV_BADPARM_S;
+    }
+    
+    /* init the oem rapi client, it only init once */
+    client = oem_rapi_client_init();
+    if (IS_ERR(client)) 
+    {
+        printk("%s: couldn't open oem rapi client\n", __func__);
+        return NV_RPC_ERROR_S;
+    } 
+    else
+    {
+        printk("%s: connected to remote oem rapi server\n", __func__);
+    }
+
+    /* clear the buffer */
+    memset(input, 0, OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE);
+    /* set the nv item value */
+    memcpy(input, &nv, sizeof(nv));
+    /* set the nv item len */
+    input[sizeof(nv)] = size;
+    /* set the nv item nam value (1 byte) */
+    memcpy(input+sizeof(nv)+sizeof(size), buf, 1);
+
+    /* set the client_arg data */
+    client_arg.event = HUAWEI_OEM_RAPI_GET_NV;
+    client_arg.cb_func = oem_rapi_client_streaming_cb_func;
+    client_arg.handle = 0;
+    client_arg.in_len = OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE;
+    client_arg.input = input;
+    client_arg.out_len_valid = 1;// 0:invalid; 1:valid
+    client_arg.output_valid = 1;// 0:invalid; 1:valid
+    client_arg.output_size = OEM_RAPI_CLIENT_MAX_OUT_BUFF_SIZE;
+    client_ret.out_len = 0;
+    client_ret.output = 0;
+
+    /* call the rpc to get the modem data */
+    ret = oem_rapi_client_streaming_function(client, &client_arg, &client_ret);
+    printk("%s: oem_rapi_client_streaming_function result=%d\n", __func__, ret);
+    
+    /* check the result */
+    if (0 == ret) 
+    {   
+        if (0 != *client_ret.out_len)   
+        {
+            ret = *client_ret.output;
+        }
+        else
+        {
+            ret = NV_RPC_ERROR_S;
+        }
+        
+        /* if nv read suc, copy data to the buf */
+        if (NV_DONE_S == ret)
+        {
+            /* +1 for the first byte is nv result */
+            memcpy(buf, client_ret.output+1, size);
+        }
+        printk("%s: out_len=%d ret=%d\n", __func__, *(client_ret.out_len), ret);
+    }
+    
+    kfree(client_ret.out_len);
+    kfree(client_ret.output);
+
+    return (nv_stat_enum_type)ret;
+}
+
+#endif
+
 #if defined(CONFIG_DEBUG_FS)
 
 static struct dentry *dent;

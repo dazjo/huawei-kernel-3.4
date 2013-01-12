@@ -21,6 +21,8 @@
 #include "msm.h"
 
 #define DBG_CSIC 0
+#include <linux/module.h>
+#define CSI_QC 1
 
 #define V4L2_IDENT_CSIC			50004
 /* MIPI	CSI controller registers */
@@ -410,6 +412,9 @@ static int __devinit csic_probe(struct platform_device *pdev)
 		rc = -ENODEV;
 		goto csic_no_resource;
 	}
+	/*the modification is Qualcomm fix*/
+	/* QC fix for camera open error start */
+#if CSI_QC
 	new_csic_dev->irq = platform_get_resource_byname(pdev,
 					IORESOURCE_IRQ, "csic");
 	if (!new_csic_dev->irq) {
@@ -417,6 +422,8 @@ static int __devinit csic_probe(struct platform_device *pdev)
 		rc = -ENODEV;
 		goto csic_no_resource;
 	}
+#endif
+	/* QC fix for camera open error end */
 	new_csic_dev->io = request_mem_region(new_csic_dev->mem->start,
 		resource_size(new_csic_dev->mem), pdev->name);
 	if (!new_csic_dev->io) {
@@ -424,6 +431,8 @@ static int __devinit csic_probe(struct platform_device *pdev)
 		rc = -EBUSY;
 		goto csic_no_resource;
 	}
+	/* QC fix for camera open error start */
+#if CSI_QC
 
 	rc = request_irq(new_csic_dev->irq->start, msm_csic_irq,
 		IRQF_TRIGGER_HIGH, "csic", new_csic_dev);
@@ -435,6 +444,8 @@ static int __devinit csic_probe(struct platform_device *pdev)
 		goto csic_no_resource;
 	}
 	disable_irq(new_csic_dev->irq->start);
+#endif
+	/* QC fix for camera open error end */
 
 	new_csic_dev->pdev = pdev;
 

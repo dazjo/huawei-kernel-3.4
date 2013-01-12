@@ -72,6 +72,11 @@ static int msm_reboot_call
 			res = kstrtoul(cmd + 4, 16, &code);
 			code &= 0xff;
 			restart_reason = 0x6f656d00 | code;
+#ifdef CONFIG_HUAWEI_KERNEL
+		} else if (!strcmp(cmd, "mtkupdate")) {
+#define MTK_DOWNLOAD_EN 0x6d74646c
+			restart_reason = MTK_DOWNLOAD_EN;
+#endif
 		} else {
 			restart_reason = 0x77665501;
 		}

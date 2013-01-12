@@ -234,8 +234,13 @@ module_param(sdio_op_mode, int, 0);
 #ifdef CONFIG_DEBUG_FS
 
 struct sdio_dloader_debug sdio_dld_debug;
-
+/* save 3M memory */
+#ifndef CONFIG_HUAWEI_KERNEL
 #define ARR_SIZE 30000
+#else
+#define ARR_SIZE 30
+#endif
+
 #define SDIO_DLD_DEBUGFS_INIT_VALUE	87654321
 #define SDIO_DLD_DEBUGFS_CASE_1_CODE	11111111
 #define SDIO_DLD_DEBUGFS_CASE_2_CODE	22222222

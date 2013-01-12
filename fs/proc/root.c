@@ -171,6 +171,9 @@ void __init proc_root_init(void)
 	}
 
 	proc_symlink("mounts", NULL, "self/mounts");
+    #ifdef CONFIG_HUAWEI_KERNEL
+	proc_app_info_init();
+    #endif
 
 	proc_net_init();
 

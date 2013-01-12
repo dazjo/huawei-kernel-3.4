@@ -136,8 +136,8 @@ struct gpio_event_output_info {
 	const struct gpio_event_direct_entry *keymap;
 	size_t keymap_size;
 };
-
-
+/*return slide status*/
+int get_slide_pressed(void);
 /* axes */
 
 enum gpio_event_axis_flags {
