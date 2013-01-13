@@ -1,6 +1,6 @@
 #!/bin/bash
 
-file_list=`find ./kernel/`
+file_list=`find ./`
 echo $file_list > file_list.txt
 
 for file in $file_list

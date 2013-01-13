@@ -269,7 +269,7 @@ static void report_keys(struct key_test_data *dev, char *command)
     
     KEY_TEST_DEBUG("report_keys: com_type = %s\n", com_type);
     if(!strncmp(com_type, "key", len))
-    {
+    {
         report_keypad_key(dev ,command + len + 1, 0);
     }
     else if(!strncmp(com_type, "lkey", len))

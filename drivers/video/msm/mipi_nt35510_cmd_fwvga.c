@@ -12,7 +12,7 @@
 
 #include "msm_fb.h"
 #include "mipi_dsi.h"
-#include "hw_lcd_common.h"
+#include "hw_lcd_common.h"
 
 #define LCD_DEVICE_NAME "mipi_cmd_nt35510_fwvga"
 

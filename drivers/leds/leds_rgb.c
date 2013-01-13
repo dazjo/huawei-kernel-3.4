@@ -120,7 +120,7 @@ static void set_blue_brightness(struct led_classdev *led_cdev,
 }
 
 static int rgb_leds_probe(struct platform_device *pdev)
-{
+{
 	int rc = -ENODEV;
 	
 	struct led_classdev *p_rgb_data = NULL;
