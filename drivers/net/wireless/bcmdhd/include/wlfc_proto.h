@@ -18,7 +18,7 @@
 *      Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a license
 * other than the GPL, without Broadcom's express prior written consent.
-* $Id: wlfc_proto.h 328114 2012-04-18 00:02:46Z $
+* $Id: wlfc_proto.h 361006 2012-10-05 07:45:51Z $
 *
 */
 #ifndef __wlfc_proto_definitions_h__
@@ -96,6 +96,8 @@
 #define WLFC_CTL_TYPE_NIC_PRD_START		15
 #define WLFC_CTL_TYPE_NIC_PRD_END		16
 #define WLFC_CTL_TYPE_AF_TXS			17
+#define WLFC_CTL_TYPE_TRANS_ID                  18
+#define WLFC_CTL_TYPE_COMP_TXSTATUS             19
 
 #define WLFC_CTL_TYPE_FILLER			255
 
@@ -225,5 +227,7 @@
 #define WLHOST_REORDERDATA_CURIDX_VALID		0x04
 #define WLHOST_REORDERDATA_EXPIDX_VALID		0x08
 #define WLHOST_REORDERDATA_NEW_HOLE		0x10
+/* transaction id data len byte 0: rsvd, byte 1: seqnumber, byte 2-5 will be used for timestampe */
+#define WLFC_CTL_TRANS_ID_LEN                   6
 
 #endif /* __wlfc_proto_definitions_h__ */
