@@ -1888,6 +1888,33 @@ static void __init msm_cpr_init(void)
 	platform_device_register(&msm8625_device_cpr);
 }
 
+static struct resource pbus_resources[] = {
+{
+		.name   = "pbus_phys_addr",
+		.start  = MSM7XXX_PBUS_PHYS,
+		.end    = MSM7XXX_PBUS_PHYS + SZ_4K - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.name	= "pbus_intr",
+		.start	= INT_PBUS_ARM11,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device msm_device_pbus = {
+	.name           = "msm_pbus",
+	.num_resources  = ARRAY_SIZE(pbus_resources),
+	.resource       = pbus_resources,
+};
+
+static void __init msm_pbus_init(void)
+{
+	if (cpu_is_msm8625())
+		pbus_resources[1].start = MSM8625_INT_PBUS_ARM11;
+	platform_device_register(&msm_device_pbus);
+}
+
 static struct clk_lookup msm_clock_8625_dummy[] = {
 	CLK_DUMMY("core_clk",		adm_clk.c,	"msm_dmov", 0),
 	CLK_DUMMY("adsp_clk",		adsp_clk.c,	NULL, 0),
@@ -2021,6 +2048,7 @@ int __init msm7x2x_misc_init(void)
 
 	platform_device_register(&pl310_erp_device);
 
+	msm_pbus_init();
 	if (msm_gpio_config_gps() < 0)
 		pr_err("Error for gpio config for GPS gpio\n");
 
