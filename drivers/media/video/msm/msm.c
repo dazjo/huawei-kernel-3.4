@@ -1922,8 +1922,10 @@ static int msm_open(struct file *f)
 		int ges_evt = MSM_V4L2_GES_CAM_OPEN;
 		struct msm_cam_server_queue *queue;
 		server_q_idx = msm_find_free_queue();
-		if (server_q_idx < 0)
+		if (server_q_idx < 0) {
+			mutex_unlock(&pcam->vid_lock);
 			return server_q_idx;
+		}
 		pcam->server_queue_idx = server_q_idx;
 		queue = &g_server_dev.server_queue[server_q_idx];
 		queue->ctrl_data = kzalloc(sizeof(uint8_t) *
