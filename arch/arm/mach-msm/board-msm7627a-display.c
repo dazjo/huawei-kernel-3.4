@@ -1253,11 +1253,6 @@ static int mipi_dsi_panel_qrd3_power(int on)
 			}
 			return 0;
 		}
-		else {
-			rc = pmapp_disp_backlight_set_brightness(0);
-			if (rc)
-				pr_err("Failed to set lcd backlight to zero\n");
-		}
 	}
 
 	if (on) {
