@@ -2745,6 +2745,13 @@ config HUAWEI_KERNEL_DEBUG
 	help
 	  Select Y if print HUAWEI log
 
+config HUAWEI_VIBRATOR_INTENSITY_SYSFS
+	bool "Huawei vibrator intensity sysfs"
+	depends on HUAWEI_SETTING_TIMER_FOR_VIBRATOR_OFF
+	default n
+	help
+	  Select Y to enable a sysfs for controlling the vibrator intensity (voltage).
+
 config HUAWEI_BT_BCM43XX
 	bool "Huawei BCM43XX Bluetooth"
 	default n

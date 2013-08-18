@@ -57,6 +57,9 @@ static struct hrtimer vibe_timer;
 #ifdef CONFIG_HUAWEI_SETTING_TIMER_FOR_VIBRATOR_OFF
 static int time_value = 0;
 #endif
+#ifdef CONFIG_HUAWEI_VIBRATOR_INTENSITY_SYSFS
+static int volt_value = 2700;
+#endif
 #ifndef CONFIG_PM8XXX_RPC_VIBRATOR
 static void set_pmic_vibrator(int on)
 {
@@ -105,7 +108,11 @@ static void set_pmic_vibrator(int on)
 		#ifndef CONFIG_HUAWEI_SETTING_TIMER_FOR_VIBRATOR_OFF
 		req.data = cpu_to_be32(get_vibrator_voltage());
 		#else
+		#ifdef CONFIG_HUAWEI_VIBRATOR_INTENSITY_SYSFS
+		req.vib_volt = cpu_to_be32(volt_value);
+		#else
 		req.vib_volt = cpu_to_be32(get_vibrator_voltage()); 
+		#endif
 		req.vib_time = cpu_to_be32(time_value); 
 		#endif
 	}
@@ -202,6 +209,27 @@ static int vibrator_get_time(struct timed_output_dev *dev)
 	return 0;
 }
 
+#ifdef CONFIG_HUAWEI_VIBRATOR_INTENSITY_SYSFS
+static ssize_t intensity_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", volt_value);
+}
+
+static ssize_t intensity_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t size)
+{
+	int value;
+
+	if (sscanf(buf, "%d", &value) != 1)
+		return -EINVAL;
+
+	volt_value = value;
+
+	return size;
+}
+
+static DEVICE_ATTR(intensity, 0666, intensity_show, intensity_store);
+#endif
+
 static enum hrtimer_restart vibrator_timer_func(struct hrtimer *timer)
 {
 	timed_vibrator_off(NULL);
@@ -216,6 +244,10 @@ static struct timed_output_dev pmic_vibrator = {
 
 void __init msm_init_pmic_vibrator(void)
 {
+#ifdef CONFIG_HUAWEI_VIBRATOR_INTENSITY_SYSFS
+	int err;
+#endif
+
 	INIT_WORK(&work_vibrator_on, pmic_vibrator_on);
 	INIT_WORK(&work_vibrator_off, pmic_vibrator_off);
 
@@ -223,6 +255,16 @@ void __init msm_init_pmic_vibrator(void)
 	vibe_timer.function = vibrator_timer_func;
 
 	timed_output_dev_register(&pmic_vibrator);
+
+#ifdef CONFIG_HUAWEI_VIBRATOR_INTENSITY_SYSFS
+	volt_value = get_vibrator_voltage();
+
+	err = device_create_file(pmic_vibrator.dev, &dev_attr_intensity);
+	if (err < 0)
+	{
+		pr_err("%s: failed to create sysfs\n", __func__);
+	}
+#endif
 }
 
 MODULE_DESCRIPTION("timed output pmic vibrator device");
