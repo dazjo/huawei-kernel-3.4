@@ -94,12 +94,20 @@ static void msm_keypad_bl_led_set(struct led_classdev *led_cdev,
     int ret = 0;
 /* 7x27a platform use mpp7 as keypad backlight */
 	#ifdef CONFIG_ARCH_MSM7X27A
-        /* use pwm to control the brightness of keypad backlight*/
-		/* make sure the led is drived by pwm when */
-        /* the system sleep indicator switch is on */
-        pmapp_button_backlight_init();
+	    if(machine_is_msm7x27a_U8815())
+	    {
+	        ret = pmic_secure_mpp_config_i_sink(PM_MPP_7, PM_MPP__I_SINK__LEVEL_5mA, \
+	            (!!value) ? PM_MPP__I_SINK__SWITCH_ENA : PM_MPP__I_SINK__SWITCH_DIS);
+	    }
+	    else
+	    {
+	        /* use pwm to control the brightness of keypad backlight*/
+	        /* make sure the led is drived by pwm when */
+	        /* the system sleep indicator switch is on */
+	        pmapp_button_backlight_init();
 
-        ret = pmapp_button_backlight_set_brightness(value);
+	        ret = pmapp_button_backlight_set_brightness(value);
+	    }
 	#else
 	    if(machine_is_msm7x30_u8800() || machine_is_msm7x30_u8800_51() || machine_is_msm8255_u8800_pro() ) 
 	    {
