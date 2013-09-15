@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
  * Author: Brian Swetland <swetland@google.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -70,5 +70,8 @@
 
 #define MSM7XXX_AD5_PHYS          0xAC000000
 #define MSM7XXX_AD5_SIZE          (SZ_1M*13)
+
+#define MSM7XXX_PBUS_PHYS	  0xA0E00000
+#define MSM7XXX_PBUS_SIZE	  SZ_4K
 
 #endif

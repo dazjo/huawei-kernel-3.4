@@ -792,7 +792,7 @@ static long mt9d113_set_wb(int wb)
         else
         {
             if(0 > (rc = mt9d113_i2c_write_w( 0x098C, 0xAB20 ))){return rc;} 	// MCU_ADDRESS [HG_LL_SAT1]
-            if(0 > (rc = mt9d113_i2c_write_w( 0x0990, 0x0080 ))){return rc;}	// MCU_DATA_0 0~255,normal use 120,150¡ª¡ª¡ª¡ª¡ª¡ªÕâ¸ö¼Ä´æÆ÷¶à´¦ÓÃµ½£¬ÇëÑîº£ÃñÔÚÃ¿Ò»´¦¶¼ÅÐ¶ÏV2ºÍV3£¬ÊÇV3¾ÍÐÞ¸Ä³É0x0080£¬¾ßÌå¿ÉÒÔ×ÉÑ¯ÎâÏþ½ð
+            if(0 > (rc = mt9d113_i2c_write_w( 0x0990, 0x0080 ))){return rc;}	// MCU_DATA_0 0~255,normal use 120,150Â¡ÂªÂ¡ÂªÂ¡ÂªÂ¡ÂªÂ¡ÂªÂ¡ÂªÃ•Ã¢Â¸Ã¶Â¼Ã„Â´Ã¦Ã†Ã·Â¶Ã Â´Â¦Ã“ÃƒÂµÂ½Â£Â¬Ã‡Ã«Ã‘Ã®ÂºÂ£ÃƒÃ±Ã”ÃšÃƒÂ¿Ã’Â»Â´Â¦Â¶Â¼Ã…ÃÂ¶ÃV2ÂºÃV3Â£Â¬ÃŠÃ‡V3Â¾ÃÃÃžÂ¸Ã„Â³Ã‰0x0080Â£Â¬Â¾ÃŸÃŒÃ¥Â¿Ã‰Ã’Ã”Ã—Ã‰Ã‘Â¯ÃŽÃ¢ÃÃ¾Â½Ã°
         }
     
         if(0 > (rc = mt9d113_i2c_write_w( 0x098C, 0x271F))){return rc;}// MCU_ADDRESS [MODE_SENSOR_FRAME_LENGTH_A]

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -41,11 +41,13 @@ struct otp_struct {
 	int iVCM_End;
 };
 static struct msm_camera_i2c_reg_conf ov5647_start_settings[] = {
-	{0x4202, 0x00},  /* streaming on */
+	{0x301c, 0xf8},  /* streaming on*/
+	{0x301a, 0xf0},  /* streaming on*/
 };
 
 static struct msm_camera_i2c_reg_conf ov5647_stop_settings[] = {
-	{0x4202, 0x0f},  /* streaming off*/
+	{0x301a, 0xf1},  /* streaming off*/
+	{0x301c, 0xfc},  /* streaming off*/
 };
 
 static struct msm_camera_i2c_reg_conf ov5647_groupon_settings[] = {
@@ -349,11 +351,11 @@ static struct msm_camera_i2c_reg_conf ov5647_recommend_settings[] = {
     {0x583c,0x26},
     {0x583d,0xae},
 	/* manual AWB,manual AE,close Lenc,open WBC*/
-	{0x3503, 0x03}, /*manual AE*/
-	{0x3501, 0x10},
-	{0x3502, 0x80},
+	{0x3503, 0x07}, /*manual AE*/
+	{0x3501, 0x00},
+	{0x3502, 0x10},
 	{0x350a, 0x00},
-	{0x350b, 0x7f},
+	{0x350b, 0x00},
 	{0x5001, 0x01}, /*manual AWB*/
 	{0x5180, 0x08},
 	{0x5186, 0x04},
@@ -1179,14 +1181,11 @@ static struct v4l2_subdev_ops ov5647_subdev_ops = {
 
 int32_t ov5647_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 {
-	struct msm_camera_sensor_info *info = NULL;
+	struct msm_camera_sensor_info *info = s_ctrl->sensordata;
 	unsigned short rdata;
 	int rc;
 
-	info = s_ctrl->sensordata;
-	msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
-		0x4202, 0xf,
-		MSM_CAMERA_I2C_BYTE_DATA);
+	s_ctrl->func_tbl->sensor_stop_stream(s_ctrl);
 	msleep(20);
 	rc = msm_camera_i2c_read(s_ctrl->sensor_i2c_client, 0x3018,
 			&rdata, MSM_CAMERA_I2C_WORD_DATA);
@@ -1236,15 +1235,7 @@ int32_t ov5647_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 	int32_t rc = 0;
 	static int csi_config;
 	s_ctrl->func_tbl->sensor_stop_stream(s_ctrl);
-	if (csi_config == 0 || res == 0)
-		msleep(66);
-	else
-		msleep(266);
 
-	msm_camera_i2c_write(
-			s_ctrl->sensor_i2c_client,
-			0x4800, 0x25,
-			MSM_CAMERA_I2C_BYTE_DATA);
 	if (update_type == MSM_SENSOR_REG_INIT) {
 		CDBG("Register INIT\n");
 		s_ctrl->curr_csi_params = NULL;
@@ -1276,11 +1267,7 @@ int32_t ov5647_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 			0x100, 0x1,
 			MSM_CAMERA_I2C_BYTE_DATA);
 		}
-		msm_camera_i2c_write(
-			s_ctrl->sensor_i2c_client,
-			0x4800, 0x4,
-			MSM_CAMERA_I2C_BYTE_DATA);
-		msleep(266);
+
 		if (res == MSM_SENSOR_RES_4)
 			v4l2_subdev_notify(&s_ctrl->sensor_v4l2_subdev,
 					NOTIFY_PCLK_CHANGE,

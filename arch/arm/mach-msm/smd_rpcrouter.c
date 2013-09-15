@@ -1,7 +1,7 @@
 /* arch/arm/mach-msm/smd_rpcrouter.c
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2007-2011, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2007-2011, The Linux Foundation. All rights reserved.
  * Author: San Mehat <san@android.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -542,15 +542,9 @@ static void rpcrouter_register_board_dev(struct rr_server *server)
 			D("%s: registering device %x\n",
 			  __func__, board_info->dev->prog);
 			list_del(&board_info->list);
-			/* fix the BUG "BUG: scheduling while atomic:" */
-#ifdef CONFIG_HUAWEI_KERNEL
-			spin_unlock_irqrestore(&rpc_board_dev_list_lock, flags);
-#endif
+			preempt_disable();
 			rc = platform_device_register(&board_info->dev->pdev);
-			/* fix the BUG "BUG: scheduling while atomic:" */
-#ifdef CONFIG_HUAWEI_KERNEL
-			spin_lock_irqsave(&rpc_board_dev_list_lock, flags);
-#endif
+			preempt_enable();
 			if (rc)
 				pr_err("%s: board dev register failed %d\n",
 				       __func__, rc);

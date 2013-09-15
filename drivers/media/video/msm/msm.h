@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -565,8 +565,9 @@ int msm_mctl_pp_done(
 int msm_mctl_pp_divert_done(
 	struct msm_cam_media_controller *p_mctl,
 	void __user *arg);
-int msm_setup_v4l2_event_queue(struct v4l2_fh *eventHandle,
+void msm_setup_v4l2_event_queue(struct v4l2_fh *eventHandle,
 					struct video_device *pvdev);
+void msm_destroy_v4l2_event_queue(struct v4l2_fh *eventHandle);
 int msm_setup_mctl_node(struct msm_cam_v4l2_device *pcam);
 struct msm_cam_v4l2_dev_inst *msm_mctl_get_pcam_inst(
 		struct msm_cam_media_controller *pmctl,

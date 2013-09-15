@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1301,6 +1301,15 @@ err_state:
 }
 EXPORT_SYMBOL(acdb_get_calibration_data);
 
+int is_acdb_enabled()
+{
+	if (acdb_data.handle != NULL)
+		return 1;
+	else
+		return 0;
+}
+EXPORT_SYMBOL(is_acdb_enabled);
+
 static u8 check_device_info_already_present(
 		struct dev_evt_msg device_info,
 			struct acdb_cache_node *acdb_cache_free_node)
@@ -1522,7 +1531,7 @@ static s32 acdb_calibrate_audpp(void)
 			result = -EINVAL;
 			goto done;
 		} else
-			MM_DBG("AUDPP is calibrated with IIR parameters");
+			MM_DBG("AUDPP is calibrated with IIR parameters\n");
 	}
 	result = acdb_fill_audpp_mbadrc();
 	if (!IS_ERR_VALUE(result)) {
@@ -2270,13 +2279,9 @@ update_cache:
 		if (ret == 1) {
 			MM_DBG("got device ready call back for another "\
 					"audplay task sessions on same COPP\n");
-			/*stream_id is used to keep track of number of active*/
-			/*sessions active on this device*/
-			acdb_cache_free_node->stream_id++;
 			mutex_unlock(&acdb_data.acdb_mutex);
 			goto done;
 		}
-		acdb_cache_free_node->stream_id++;
 	}
 	update_acdb_data_struct(acdb_cache_free_node);
 	acdb_data.device_cb_compl = 1;
@@ -2317,6 +2322,9 @@ static void audpp_cb(void *private, u32 id, u16 *msg)
 		}
 		goto done;
 	}
+	/*stream_id is used to keep track of number of active*/
+	/*sessions active on this device*/
+	acdb_cache_rx.stream_id++;
 
 	acdb_data.acdb_state |= AUDPP_READY;
 	acdb_data.audpp_cb_compl = 1;

@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2011, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2009-2013, Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -28,6 +28,7 @@
 #include <linux/debugfs.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/reboot.h>
 #include <asm/uaccess.h>
 #include <asm/pgtable.h>
 #include <mach/msm_rpcrouter.h>
@@ -116,6 +117,7 @@ static void rmt_storage_sdio_smem_work(struct work_struct *work);
 #endif
 
 static struct rmt_storage_client_info *rmc;
+struct rmt_storage_srv *rmt_srv;
 
 #ifdef CONFIG_MSM_SDIO_SMEM
 DECLARE_DELAYED_WORK(sdio_smem_work, rmt_storage_sdio_smem_work);
@@ -1348,6 +1350,91 @@ show_sync_sts(struct device *dev, struct device_attribute *attr, char *buf)
 			rmt_storage_get_sync_status(srv->rpc_client));
 }
 
+/*
+ * Initiate the remote storage force sync and wait until
+ * sync status is done or maximum 4 seconds in the reboot notifier.
+ * Usually RMT storage sync is not taking more than 2 seconds
+ * for encryption and sync.
+ */
+#define MAX_GET_SYNC_STATUS_TRIES 200
+#define RMT_SLEEP_INTERVAL_MS 20
+static int rmt_storage_reboot_call(
+	struct notifier_block *this, unsigned long code, void *cmd)
+{
+	int ret, count = 0;
+
+	/*
+	 * In recovery mode RMT daemon is not available,
+	 * so return from reboot notifier without initiating
+	 * force sync.
+	 */
+	spin_lock(&rmc->lock);
+	if (!rmc->open_excl) {
+		spin_unlock(&rmc->lock);
+		msm_rpc_unregister_client(rmt_srv->rpc_client);
+		return NOTIFY_DONE;
+	}
+
+	spin_unlock(&rmc->lock);
+	switch (code) {
+	case SYS_RESTART:
+	case SYS_HALT:
+	case SYS_POWER_OFF:
+		pr_info("%s: Sending force-sync RPC request\n", __func__);
+		ret = rmt_storage_force_sync(rmt_srv->rpc_client);
+		if (ret)
+			break;
+
+		do {
+			count++;
+			msleep(RMT_SLEEP_INTERVAL_MS);
+			ret = rmt_storage_get_sync_status(rmt_srv->rpc_client);
+		} while (ret != 1 && count < MAX_GET_SYNC_STATUS_TRIES);
+
+		if (ret == 1)
+			pr_info("%s: Final-sync successful\n", __func__);
+		else
+			pr_err("%s: Final-sync failed\n", __func__);
+
+		/*
+		 * Check if any ongoing efs_sync triggered just before force
+		 * sync is pending. If so, wait for 4sec for completing efs_sync
+		 * before unregistring client.
+		 */
+		count = 0;
+		while (count < MAX_GET_SYNC_STATUS_TRIES) {
+			if (atomic_read(&rmc->wcount) == 0) {
+				break;
+			} else {
+				count++;
+				msleep(RMT_SLEEP_INTERVAL_MS);
+			}
+		}
+		if (atomic_read(&rmc->wcount))
+			pr_err("%s: Efs_sync still incomplete\n", __func__);
+
+		pr_info("%s: Un-register RMT storage client\n", __func__);
+		msm_rpc_unregister_client(rmt_srv->rpc_client);
+		break;
+
+	default:
+		break;
+	}
+	return NOTIFY_DONE;
+}
+
+/*
+ * For the RMT storage sync, RPC channels are required. If we do not
+ * give max priority to RMT storage reboot notifier, RPC channels may get
+ * closed before RMT storage sync completed if RPC reboot notifier gets
+ * executed before this remotefs reboot notifier. Hence give the maximum
+ * priority to this reboot notifier.
+ */
+static struct notifier_block rmt_storage_reboot_notifier = {
+	.notifier_call = rmt_storage_reboot_call,
+	.priority = INT_MAX,
+};
+
 static int rmt_storage_init_ramfs(struct rmt_storage_srv *srv)
 {
 	struct shared_ramfs_table *ramfs_table;
@@ -1525,7 +1612,8 @@ static int rmt_storage_probe(struct platform_device *pdev)
 	int ret;
 
 	dev = container_of(pdev, struct rpcsvr_platform_device, base);
-	srv = rmt_storage_get_srv(dev->prog);
+	rmt_srv = srv = rmt_storage_get_srv(dev->prog);
+
 	if (!srv) {
 		pr_err("%s: Invalid prog = %#x\n", __func__, dev->prog);
 		return -ENXIO;
@@ -1563,6 +1651,10 @@ static int rmt_storage_probe(struct platform_device *pdev)
 
 	/* For targets that poll SMEM, set status to ready */
 	rmt_storage_set_client_status(srv, 1);
+
+	ret = register_reboot_notifier(&rmt_storage_reboot_notifier);
+	if (ret)
+		pr_err("%s: Failed to register reboot notifier", __func__);
 
 	ret = sysfs_create_group(&pdev->dev.kobj, &dev_attr_grp);
 	if (ret)

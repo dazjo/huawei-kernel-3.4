@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1933,6 +1933,15 @@ static void __init msm_cpr_init(void)
 	pr_info("%s: cpr: turbo_quot: 0x%x\n", __func__, cpr_info->turbo_quot);
 	pr_info("%s: cpr: pvs_fuse: 0x%x\n", __func__, cpr_info->pvs_fuse);
 	pr_info("%s: cpr: floor_fuse: 0x%x\n", __func__, cpr_info->floor_fuse);
+	kfree(cpr_info);
+
+	if (msm8625_cpu_id() == MSM8625A)
+		msm_cpr_pdata.max_freq = 1209600;
+	else if (msm8625_cpu_id() == MSM8625) {
+		msm_cpr_pdata.max_freq = 1008000;
+		msm_cpr_mode_data[TURBO_MODE].turbo_Vmin = 1175000;
+	}
+
 	pr_info("%s: cpr: nom_Vmin: %d, turbo_Vmin: %d\n", __func__,
 		msm_cpr_mode_data[TURBO_MODE].nom_Vmin,
 		msm_cpr_mode_data[TURBO_MODE].turbo_Vmin);
@@ -1940,17 +1949,37 @@ static void __init msm_cpr_init(void)
 		msm_cpr_mode_data[TURBO_MODE].nom_Vmax,
 		msm_cpr_mode_data[TURBO_MODE].turbo_Vmax);
 
-	kfree(cpr_info);
-
-	if (msm8625_cpu_id() == MSM8625A)
-		msm_cpr_pdata.max_freq = 1209600;
-	else if (msm8625_cpu_id() == MSM8625)
-		msm_cpr_pdata.max_freq = 1008000;
-
 	msm_cpr_clk_enable();
 
 	platform_device_register(&msm8625_vp_device);
 	platform_device_register(&msm8625_device_cpr);
+}
+
+static struct resource pbus_resources[] = {
+{
+		.name   = "pbus_phys_addr",
+		.start  = MSM7XXX_PBUS_PHYS,
+		.end    = MSM7XXX_PBUS_PHYS + SZ_4K - 1,
+		.flags  = IORESOURCE_MEM,
+	},
+	{
+		.name	= "pbus_intr",
+		.start	= INT_PBUS_ARM11,
+		.flags	= IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device msm_device_pbus = {
+	.name           = "msm_pbus",
+	.num_resources  = ARRAY_SIZE(pbus_resources),
+	.resource       = pbus_resources,
+};
+
+static void __init msm_pbus_init(void)
+{
+	if (cpu_is_msm8625())
+		pbus_resources[1].start = MSM8625_INT_PBUS_ARM11;
+	platform_device_register(&msm_device_pbus);
 }
 
 static struct clk_lookup msm_clock_8625_dummy[] = {
@@ -2091,6 +2120,7 @@ int __init msm7x2x_misc_init(void)
 
 	platform_device_register(&pl310_erp_device);
 
+	msm_pbus_init();
 	if (msm_gpio_config_gps() < 0)
 		pr_err("Error for gpio config for GPS gpio\n");
 

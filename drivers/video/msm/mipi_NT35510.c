@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -428,7 +428,7 @@ static char video26[6] = {
 static char video27[2] = {
 	0x35, 0x00,
 };
-static char config_video_MADCTL[2] = {0x36, 0xC0};
+
 static struct dsi_cmd_desc nt35510_video_display_on_cmds[] = {
 	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(video0), video0},
 	{DTYPE_GEN_LWRITE, 1, 0, 0, 0, sizeof(video1), video1},
@@ -464,10 +464,6 @@ static struct dsi_cmd_desc nt35510_video_display_on_cmds[] = {
 			display_on},
 };
 
-static struct dsi_cmd_desc nt35510_video_display_on_cmds_rotate[] = {
-	{DTYPE_DCS_WRITE1, 1, 0, 0, 0,
-		sizeof(config_video_MADCTL), config_video_MADCTL},
-};
 static int mipi_nt35510_lcd_on(struct platform_device *pdev)
 {
 	struct msm_fb_data_type *mfd;
@@ -491,15 +487,13 @@ static int mipi_nt35510_lcd_on(struct platform_device *pdev)
 		rotate = mipi_nt35510_pdata->rotate_panel();
 
 	if (mipi->mode == DSI_VIDEO_MODE) {
+		if (rotate)
+			video19[2] = 0x06;
+
 		mipi_dsi_cmds_tx(&nt35510_tx_buf,
 			nt35510_video_display_on_cmds,
 			ARRAY_SIZE(nt35510_video_display_on_cmds));
 
-		if (rotate) {
-			mipi_dsi_cmds_tx(&nt35510_tx_buf,
-				nt35510_video_display_on_cmds_rotate,
-			ARRAY_SIZE(nt35510_video_display_on_cmds_rotate));
-		}
 	} else if (mipi->mode == DSI_CMD_MODE) {
 		mipi_dsi_cmds_tx(&nt35510_tx_buf,
 			nt35510_cmd_display_on_cmds,
@@ -599,6 +593,8 @@ static int __devinit mipi_nt35510_lcd_probe(struct platform_device *pdev)
 		mipi_nt35510_pdata = pdev->dev.platform_data;
 		if (mipi_nt35510_pdata->bl_lock)
 			spin_lock_init(&mipi_nt35510_pdata->bl_spinlock);
+		else
+			mipi_nt35510_bl_ctrl = 1;
 		return 0;
 	}
 

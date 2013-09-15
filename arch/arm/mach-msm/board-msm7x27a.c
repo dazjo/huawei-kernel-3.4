@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -252,7 +252,7 @@ static struct msm_i2c_platform_data msm_gsbi1_qup_i2c_pdata = {
 #define MSM_PMEM_MDP_SIZE       0x2300000
 #define MSM7x25A_MSM_PMEM_MDP_SIZE       0x1500000
 
-#define MSM_PMEM_ADSP_SIZE      0x1200000
+#define MSM_PMEM_ADSP_SIZE      0x1300000
 #define MSM_PMEM_ADSP_BIG_SIZE      0x1E00000
 #define MSM7x25A_MSM_PMEM_ADSP_SIZE      0xB91000
 #define CAMERA_ZSL_SIZE		(SZ_1M * 60)
@@ -1092,13 +1092,13 @@ static void __init msm7x27a_reserve(void)
 }
 
 
-/* 此段代码被全部移到static void __init msm7x27a_reserve(void)函数前面 */
+/* 麓脣露脦麓煤脗毛卤禄脠芦虏驴脪脝碌陆static void __init msm7x27a_reserve(void)潞炉脢媒脟掳脙忙 */
 
 static void __init msm8625_reserve(void)
 {
 	msm7x27a_reserve();
 
-/* 此段代码被全部移到的实现被移到static void __init msm7x27a_reserve(void)函数里面实现 */
+/* 麓脣露脦麓煤脗毛卤禄脠芦虏驴脪脝碌陆碌脛脢碌脧脰卤禄脪脝碌陆static void __init msm7x27a_reserve(void)潞炉脢媒脌茂脙忙脢碌脧脰 */
 
 	memblock_remove(MSM8625_SECONDARY_PHYS, SZ_8);
 	memblock_remove(MSM8625_WARM_BOOT_PHYS, SZ_32);

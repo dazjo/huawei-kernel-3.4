@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -188,6 +188,9 @@ struct diagchar_dev {
 	unsigned char *buf_msg_mask_update;
 	unsigned char *buf_log_mask_update;
 	unsigned char *buf_event_mask_update;
+	struct mutex diag_data_modem_mutex;
+	struct mutex diag_data_lpass_mutex;
+	struct mutex diag_data_wcnss_mutex;
 	smd_channel_t *ch;
 	smd_channel_t *ch_cntl;
 	smd_channel_t *ch_dci;
@@ -203,6 +206,7 @@ struct diagchar_dev {
 	int in_busy_wcnss_2;
 	int in_busy_dci;
 	int read_len_legacy;
+	struct mutex diag_hdlc_mutex;
 	unsigned char *hdlc_buf;
 	unsigned hdlc_count;
 	unsigned hdlc_escape;
