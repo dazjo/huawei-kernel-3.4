@@ -892,13 +892,15 @@ static void report_hs_key(uint32_t key_code, uint32_t key_parm)
         printk("%s:Press power key ,key=%d ,now time (%02d:%02d:%02d.%09lu UTC)\n",__func__,key_code,tm.tm_hour, tm.tm_min, tm.tm_sec, ts.tv_nsec);
     #endif
    	#ifdef CONFIG_HUAWEI_KERNEL
-		input_report_key(hs->ipdev, KEY_POWER, (key_code != HS_REL_K));
+		input_report_key(hs->ipdev, KEY_POWER,
+					(key_code != HS_REL_K));
 		/* power key detect solution for ANR */
 		if(key_code == HS_REL_K)
 			power_key_dump();
 
    	#else
-   		input_report_key(hs->ipdev, key, (key_code != HS_REL_K));
+			input_report_key(hs->ipdev, key,
+						(key_code != HS_REL_K));
    	#endif
 		break;
 	case KEY_MEDIA:
