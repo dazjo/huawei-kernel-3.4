@@ -13,35 +13,36 @@
 
 
 #define SYN_CONFIG_SIZE 32 * 16
-#define CURRENT_PR_VERSION  1191601
+#define CURRENT_PR_VERSION  1294018
 #define TP_ID0  127
 #define TP_ID1  128
 
+#define IC_TYPE_2202 2202
+#define IC_TYPE_3200 3200
 
-struct config_tp{
-	uint32_t version; 
-	u16 tp_model ;
-	u16 ic_number;
-	uint8_t *config;
+struct syn_version_config
+{
+	uint32_t syn_firmware_version;
+	uint32_t syn_moudel_version;
+	u16 syn_ic_name;
 };
 
 /* Y300 and G510 Defined separately */
-enum {
-   COB_Y300_OFILM = 0,
-   COB_Y300_ECW = 2,
-   COB_Y300_TRULY = 8,
-   COB_Y300_NO_MOUDLE = 10,
-};
 
-enum {
-   COB_G510_OFILM = 0,
-   COB_G510_TRULY = 8,
-   COB_G510_JDC = 10,
-};
+typedef enum 
+{
+   TP_COB_ID0 = 0x00, //ID0 low   , ID1  low
+   TP_COB_ID2 = 0x02, //ID0 float , ID1  low
+   TP_COB_ID8 = 0x08, //ID1 float , ID0  low
+   TP_COB_IDA = 0x0A, //ID0 float , ID1  float
+}hw_tp_id_index;
 
-uint32_t get_tp_version_config(int moudle_id, u16 ic_number, uint8_t ** temp_version);
+
+
+uint8_t *get_tp_version_config(int module_id,u16 ic_type);
+
 uint8_t* get_tp_lockdown_config(void);
-/*COB tp module id gpio init*/
-int moudle_gpio_init(void);
+
 /*get COB tp module id*/
 int get_tp_id(void);
+
