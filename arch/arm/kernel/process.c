@@ -300,6 +300,8 @@ __setup("reboot=", reboot_setup);
 
 void machine_shutdown(void)
 {
+	//apply qualcomm patch,commit:78e9b56740ad789351b6d15cd9a67fe03091a3a1
+	preempt_disable();
 #ifdef CONFIG_SMP
 	smp_send_stop();
 #endif

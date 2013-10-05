@@ -29,9 +29,10 @@ struct sequence{
     uint32_t value;
     uint32_t time; //unit is ms
 };
-#define LCD_HX8369A_TIANMA_ESD_SIGN		1
+/* close hx8369a ESD control macro */
+#define LCD_HX8369A_TIANMA_ESD_SIGN		0
+/* close otm8009a ESD control macro */
 #define LCD_OTM8009A_CMI_ESD_SIGN	1
-
 #if (LCD_HX8369A_TIANMA_ESD_SIGN || LCD_OTM8009A_CMI_ESD_SIGN)
 struct read_sequence{
 	uint32_t reg;  //register

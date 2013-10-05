@@ -185,7 +185,8 @@ hw_bt_device_model get_hw_bt_device_model(void)
       || machine_is_msm7x27a_H867G()
       || machine_is_msm8x25_H881C()
       || machine_is_msm7x27a_H868C()	
-      || machine_is_msm8x25_C8950D())
+      || machine_is_msm8x25_C8950D()
+      || machine_is_msm8x25_Y301_A1())
     {
         return BT_BCM4330;
     }
@@ -230,6 +231,7 @@ char *get_bt_device_name(void)
 
 /* modify spk mic function name */
 /* Add DTS property */
+/* add special requirement for U8951-1/-51 */
 void get_audio_property(char *audio_property)
 {
   unsigned int property = AUDIO_PROPERTY_INVALID;
@@ -239,6 +241,7 @@ void get_audio_property(char *audio_property)
   audio_property_type spk_type = MONO_SPEAKER;
   audio_property_type spkmic_type = SPK_MAIN_MIC;
   audio_property_type dts_enable = DTS_DISABLE;
+  audio_property_type submic_mmi = SMICMMI_ENABLE;
   
   mic_type = get_audio_mic_type();
   fir_enable = get_audio_fir_enabled();
@@ -246,8 +249,9 @@ void get_audio_property(char *audio_property)
   spk_type = get_audio_speaker_type();
   spkmic_type = get_audio_spkmic_type();
   dts_enable = get_audio_dts_enable();
+  submic_mmi = get_audio_mmi_submic_test_enable();
   
-  property = spkmic_type | spk_type | fm_type | fir_enable | mic_type | dts_enable;
+  property = spkmic_type | spk_type | fm_type | fir_enable | mic_type | dts_enable | submic_mmi;
 
   sprintf(audio_property, "%8x", property);
 }
@@ -444,7 +448,8 @@ lcd_type get_hw_lcd_resolution_type(void)
         || machine_is_msm8x25_U8833D()
         || machine_is_msm8x25_U8833()        
         || machine_is_msm8x25_H881C()
-        || machine_is_msm8x25_C8812P())
+        || machine_is_msm8x25_C8812P()
+        || machine_is_msm8x25_Y301_A1())
 	{
 		lcd_resolution = LCD_IS_WVGA;
 	}
@@ -530,14 +535,16 @@ lcd_panel_type get_lcd_panel_type(void)
 				hw_lcd_panel = MIPI_VIDEO_NT35512_BOE_WVGA;
 				break;
             case LCD_HW_IDA:
+
                 hw_lcd_panel = MIPI_CMD_NT35510_CHIMEI_WVGA;
 				break;
 			default:
-				hw_lcd_panel = MIPI_CMD_NT35510_BOE_WVGA;
+				hw_lcd_panel = MIPI_CMD_HX8369A_TIANMA_WVGA;
 				break;
 		}
 	}
-	else if (machine_is_msm8x25_H881C())
+	else if (machine_is_msm8x25_H881C()
+		|| machine_is_msm8x25_Y301_A1())
 	{
 		switch (lcd_id)
 		{
@@ -550,8 +557,9 @@ lcd_panel_type get_lcd_panel_type(void)
 			case LCD_HW_ID5:
 				hw_lcd_panel = MIPI_CMD_NT35510_BOE_WVGA;
 				break;
+			/*change the default value of LCD*/
 			default:
-				hw_lcd_panel = MIPI_CMD_NT35510_BOE_WVGA;
+				hw_lcd_panel = MIPI_CMD_HX8369A_TIANMA_WVGA;
 				break;
 		}
 	}
@@ -761,6 +769,60 @@ unsigned int get_framebuffer_size(void)
 	return fb_size;
 	
 }
+
+unsigned int get_mdp_pmem_size(void)
+{
+	unsigned int mdp_pmem_size = 0;
+	lcd_type lcd_resolution = LCD_IS_HVGA;
+	lcd_resolution = get_hw_lcd_resolution_type();
+	switch(lcd_resolution)
+	{
+		case LCD_IS_QVGA:
+		case LCD_IS_HVGA:
+			mdp_pmem_size = 0x1500000;  //21M
+			break;
+		case LCD_IS_WVGA:
+		case LCD_IS_FWVGA:
+			mdp_pmem_size = 0x1C00000; //28M
+			break;
+		case LCD_IS_QHD:
+			mdp_pmem_size = 0x2300000; //35M
+			break;
+		default:
+			mdp_pmem_size = 0x2300000; //35M
+			break;
+	}
+	
+	return mdp_pmem_size;	
+}
+
+/*===========================================================================
+
+FUNCTION     get_vibrator_voltage
+
+DESCRIPTION
+  This function return different voltage mv
+
+DEPENDENCIES
+  
+RETURN VALUE
+  voltage mv
+
+SIDE EFFECTS
+  None
+===========================================================================*/
+uint get_vibrator_voltage(void)
+{
+    if(machine_is_msm7x27a_H867G() || 
+       machine_is_msm7x27a_H868C()  )
+    {
+        return 3000;
+    }
+    else
+    {
+        return 2700;
+    }
+}
 /*===========================================================================
 
 
@@ -789,7 +851,7 @@ compass_gs_position_type  get_compass_gs_position(void)
         || (machine_is_msm8x25_U8950() && (HW_VER_SUB_VB <= get_hw_sub_board_id()))
         || machine_is_msm8x25_H881C()
         || machine_is_msm8x25_U8950D()
-        )
+        || machine_is_msm8x25_Y301_A1())
 	{
 		compass_gs_position=COMPASS_TOP_GS_TOP;
 	}
@@ -1330,7 +1392,7 @@ tp_type get_touch_type(void)
         || machine_is_msm8x25_U8833()        
         || machine_is_msm8x25_C8813()
         || machine_is_msm8x25_H881C()		
-       )
+        || machine_is_msm8x25_Y301_A1())
 	{
 		return TP_COB;
 	}
@@ -1402,7 +1464,8 @@ hw_ds_type get_hw_ds_type(void)
       || machine_is_msm7x27a_H867G()
       || machine_is_msm8x25_H881C()
       || machine_is_msm7x27a_H868C()
-	  || (machine_is_msm8x25_U8950() && (HW_VER_SUB_VA == get_hw_sub_board_id())) )
+      || (machine_is_msm8x25_U8950() && (HW_VER_SUB_VA == get_hw_sub_board_id())) 
+      || machine_is_msm8x25_Y301_A1() )
     {
         ret = HW_NODS;
     }
@@ -1457,7 +1520,8 @@ hw_bt_wakeup_gpio_type get_hw_bt_wakeup_gpio_type(void)
         || machine_is_msm7x27a_H867G()
         || machine_is_msm7x27a_H868C()
         || machine_is_msm8x25_H881C()
-        || machine_is_msm8x25_U8950D())
+        || machine_is_msm8x25_U8950D()
+        || machine_is_msm8x25_Y301_A1())
     {
         bt_wakeup_gpio_type = HW_BT_WAKEUP_GPIO_IS_27;
     }
@@ -1544,6 +1608,40 @@ audio_property_type get_audio_spkmic_type(void)
     {
         return SPK_MAIN_MIC;
     }
+}
+
+/*===========================================================================
+
+
+FUNCTION     bool get_audio_mmi_submic_test_enable
+
+DESCRIPTION
+           This function descripe which project need test submic in MMI test.
+           WARNING: Don't add any other board_id in this function, this function is the special
+                     requirement for G510-1/-51 proj. All of HW have double mic, but the part 
+                     of proj except VDF use singal mic, product want to test the sub mic in MMI, 
+                     so we add this function for this requirement. If you want to modify this function,
+                     pls contact with audio driver part.
+
+DEPENDENCIES
+  
+RETURN VALUE
+  true or false
+
+SIDE EFFECTS
+  None
+===========================================================================*/
+/* U8951-1 U8951N-1 have submic in HW, need to test submic in MMI */
+audio_property_type get_audio_mmi_submic_test_enable(void)
+{
+    if (machine_is_msm8x25_U8951() && (HW_VER_SUB_VA == get_hw_sub_board_id()))
+    {
+        return SMICMMI_ENABLE;
+    }
+	else
+	{
+	    return SMICMMI_DISABLE;
+	}
 }
 
 /*===========================================================================
@@ -1646,6 +1744,7 @@ audio_property_type get_audio_fir_enabled(void)
        || machine_is_msm8x25_C8833D()
        || machine_is_msm8x25_U8833D()
        || machine_is_msm8x25_U8833()
+       || machine_is_msm8x25_Y301_A1()
        )
     {
         return FIR_ENABLE;
@@ -1684,7 +1783,8 @@ hw_camera_type get_hw_camera_mirror_type(void)
     if( machine_is_msm7x27a_C8820() || machine_is_msm7x27a_U8661() 
     || machine_is_msm7x27a_U8655_EMMC()
     || machine_is_msm7x27a_H867G()
-    || machine_is_msm7x27a_H868C())
+    || machine_is_msm7x27a_H868C()
+    || machine_is_msm8x25_Y301_A1())
     {
         /*back camera should mirror and flip*/
         ret |= HW_MIRROR_AND_FLIP;
@@ -1755,4 +1855,16 @@ hw_camera_flash_number get_hw_camera_flash_number(void)
     }
     
     return ret;
+}
+/*only for y300-1 y300-51 y300N-1 y300N-51 ,not affect U8833D(it is only 5M FF)*/
+bool check_product_y300_for_camera(void)
+{
+    if (machine_is_msm8x25_U8833())
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }

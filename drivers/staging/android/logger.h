@@ -51,13 +51,32 @@ struct logger_entry {
 	char		msg[0];		/* the entry's payload */
 };
 
+#ifdef CONFIG_HUAWEI_KERNEL
+/*
+ * Android log priority values, in ascending priority order.
+ */
+typedef enum android_LogPriority {
+    ANDROID_LOG_UNKNOWN = 0,
+    ANDROID_LOG_DEFAULT,    /* only for SetMinPriority() */
+    ANDROID_LOG_VERBOSE,
+    ANDROID_LOG_DEBUG,
+    ANDROID_LOG_INFO,
+    ANDROID_LOG_WARN,
+    ANDROID_LOG_ERROR,
+    ANDROID_LOG_FATAL,
+    ANDROID_LOG_SILENT,     /* only for SetMinPriority(); must be last */
+} android_LogPriority;
+
+#define MAX_TAG_LEN  100
+#endif
+
 #define LOGGER_LOG_RADIO	"log_radio"	/* radio-related messages */
 #define LOGGER_LOG_EVENTS	"log_events"	/* system/hardware events */
 #define LOGGER_LOG_SYSTEM	"log_system"	/* system/framework messages */
 #define LOGGER_LOG_MAIN		"log_main"	/* everything else */
 #if defined(CONFIG_HUAWEI_KERNEL)
 #define LOGGER_LOG_EXCEPTION	"log_exception"	/* exception */
-#define LOGGER_LOG_POWER	"log_power"	/* power */
+#define LOGGER_LOG_POWER	"smart_power"	/* dev/smart/power */
 #endif
 
 #define LOGGER_ENTRY_MAX_PAYLOAD	4076

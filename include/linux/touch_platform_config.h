@@ -36,12 +36,23 @@
 #define LCD_ALL_HVGA_32INCHTP     521  /* 3.2 INCH TP */
 #define LCD_ALL_FWVGA 958
 #define LCD_ALL_WVGA_4INCHTP     882  /* U8610 use this TP */
+
+/*independent button num*/
+#define MAX_BUTTON_NUM   4  
+
 /*add this function for judge the tp type*/
 struct tp_resolution_conversion{
     int lcd_x;
     int lcd_y;
     int lcd_all;
 };
+
+/*add for independent button*/
+struct tp_button_map{
+	int button_num;
+	int button_map[MAX_BUTTON_NUM];
+};
+
 struct touch_hw_platform_data {
 	int (*touch_power)(int on);	/* Only valid in first array entry */
 	int (*set_touch_interrupt_gpio)(void);/*it will config the gpio*/
@@ -50,5 +61,7 @@ struct touch_hw_platform_data {
 	int (*touch_reset)(void);
 	int (*get_touch_reset_gpio)(void);
     int (*get_touch_resolution)(struct tp_resolution_conversion *tp_resolution_type);/*add this function for judge the tp type*/
+	int (*read_button_flag)(void);
+	int (*get_touch_button_map)(struct tp_button_map *tp_button_map);
 };
 #endif /*_TOUCH_PLATFORM_CONFIG_H */

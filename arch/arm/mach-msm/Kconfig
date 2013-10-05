@@ -1052,6 +1052,13 @@ config MACH_MSM8X25_H881C
 	bool "MSM8X25_H881C SURF"
 	help
 	  Support for the HUAWEI 8x25 H881C board.
+config MACH_MSM8X25_Y301_A1
+	depends on ARCH_MSM8625
+	depends on !MSM_STACKED_MEMORY
+	default n
+	bool "MSM8X25_Y301_A1 SURF"
+	help
+	  Support for the HUAWEI 8x25 Y301_A1 board.
 
 endmenu
 

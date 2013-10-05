@@ -4192,6 +4192,8 @@ static int tavarua_resume(struct platform_device *pdev)
 					tavarua_resume %d\n", retval);
 				return -EIO;
 			}
+			/*add the QCOMM patch */
+			tavarua_handle_interrupts(radio);
 		}
 	}
 	return 0;

@@ -148,8 +148,10 @@ enum  gs_st_reg_click_src {
 #define GS_ST_F_INPUT_OPEN 		0x0040  /* Set if input device is opened */
 #define GS_ST_F_IRQ_WAKE 		0x0080  /* IRQ is setup in wake mode */
 
+/*<MSM7X25 hw modify --GSENSOR-- yuxuesong 20091125 £ºbegin */
 #define     GPIO_INT1                         19
 #define     GPIO_INT2                         20
+/* MSM7X25 hw modify --GSENSOR-- yuxuesong 20091125 £ºend>*/
 
 
 #define     GS_ST_TIMRER                   (1000*1000000)           /*1000000s*/

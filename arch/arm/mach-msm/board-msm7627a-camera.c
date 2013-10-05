@@ -54,7 +54,7 @@ static uint32_t camera_off_gpio_table[] = {
 	GPIO_CFG(60, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_8MA), 
 	GPIO_CFG(61, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_8MA), 
 	GPIO_CFG(119, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), /*PWD*/
-	//GPIO_CFG(120, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), /* PWD for front camera*/   
+	GPIO_CFG(120, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), /* PWD for front camera*/   
 };
 
 static uint32_t camera_on_gpio_table[] = {
@@ -67,7 +67,7 @@ static uint32_t camera_on_gpio_table[] = {
 	GPIO_CFG(60, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
 	GPIO_CFG(61, 1, GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA), 
 	GPIO_CFG(119, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), /* PWD */
-	//GPIO_CFG(120, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), /* PWD for front camera*/   
+	GPIO_CFG(120, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA), /* PWD for front camera*/   
 };
 
 /* update to 1040 by lishubin begin */
@@ -705,11 +705,11 @@ static struct msm_camera_sensor_info msm_camera_sensor_s5k5ca_data = {
 #ifdef CONFIG_HUAWEI_CAMERA_SENSOR_MT9V113
 static struct gpio mt9v113_cam_req_gpio[] = {
 	{8, GPIOF_DIR_OUT, "CAM_RESET"},
-	//{120, GPIOF_DIR_OUT, "CAM_PWD"},
+	{120, GPIOF_DIR_OUT, "CAM_PWD"},
 };
 
 static struct msm_gpio_set_tbl mt9v113_cam_gpio_req_init_tbl[] = {
-	//{120, GPIOF_OUT_INIT_LOW, 1000},  //set the flag of gpio, then usleep the times
+	{120, GPIOF_OUT_INIT_LOW, 1000},  //set the flag of gpio, then usleep the times
 	{8, GPIOF_OUT_INIT_HIGH, 10000},
 };
 
@@ -829,14 +829,21 @@ static struct msm_camera_sensor_info msm_camera_sensor_gc0313_data = {
 #ifdef CONFIG_HUAWEI_CAMERA_SENSOR_BF3905
 static struct gpio bf3905_cam_req_gpio[] = {
 	{8, GPIOF_DIR_OUT, "CAM_RESET"},
+	{120, GPIOF_DIR_OUT, "CAM_PWDN"},
 };
 
+static struct msm_gpio_set_tbl bf3905_cam_gpio_init_tbl[] = {
+	{8, GPIOF_OUT_INIT_LOW, 1000},
+	{120, GPIOF_OUT_INIT_LOW, 1000},
+};
 static struct msm_gpio_set_tbl bf3905_cam_gpio_set_tbl[] = {
-	{8, GPIOF_OUT_INIT_LOW, 10000},
-	{8, GPIOF_OUT_INIT_HIGH, 10000},
+	{120, GPIOF_OUT_INIT_HIGH, 1000},
+	{8, GPIOF_OUT_INIT_HIGH, 1000},
+	{120, GPIOF_OUT_INIT_LOW, 1000},
 };
 
 static struct msm_gpio_set_tbl bf3905_cam_gpio_config_tbl_power_down[] = {
+	{120, GPIOF_OUT_INIT_HIGH, 1000},
 	{8 ,   GPIOF_OUT_INIT_LOW,  1000 },
 };
 static struct msm_camera_gpio_conf gpio_conf_bf3905 = {
@@ -848,6 +855,8 @@ static struct msm_camera_gpio_conf gpio_conf_bf3905 = {
 	.cam_gpio_req_tbl_size = ARRAY_SIZE(bf3905_cam_req_gpio),
 	.cam_gpio_set_tbl = bf3905_cam_gpio_set_tbl,
 	.cam_gpio_set_tbl_size = ARRAY_SIZE(bf3905_cam_gpio_set_tbl),
+	.cam_gpio_req_init_tbl = bf3905_cam_gpio_init_tbl,
+	.cam_gpio_req_init_tbl_size = ARRAY_SIZE(bf3905_cam_gpio_init_tbl),
 	.cam_gpio_config_tbl_power_down = bf3905_cam_gpio_config_tbl_power_down,
 	.cam_gpio_config_tbl_power_down_size = ARRAY_SIZE(bf3905_cam_gpio_config_tbl_power_down),
 	.gpio_no_mux = 1,
@@ -1085,7 +1094,7 @@ static struct msm_camera_sensor_flash_data flash_hi542 = {
 };
 
 static struct msm_camera_sensor_platform_info sensor_board_info_hi542 = {
-	.mount_angle	= 270,
+	.mount_angle	= 90,
 	.cam_vreg = msm_cam_vreg,
 	.num_vreg = ARRAY_SIZE(msm_cam_vreg),
 	.gpio_conf = &gpio_conf_hi542,

@@ -1516,7 +1516,7 @@ enum nl80211_attrs {
 	NL80211_ATTR_BG_SCAN_PERIOD,
 
 	/* add attributes here, update the policy in nl80211.c */
-
+	NL80211_ATTR_MAX_ASSOC = 200,
 	__NL80211_ATTR_AFTER_LAST,
 	NL80211_ATTR_MAX = __NL80211_ATTR_AFTER_LAST - 1
 };

@@ -237,6 +237,12 @@ int32_t msm_sensor_setting1(struct msm_sensor_ctrl_t *s_ctrl,
     			msm_sensor_write_init_settings(s_ctrl);
     		}
             csi_config = 0;
+			/*let image rotate for different fixture angle*/	
+			if(s_ctrl->func_tbl->sensor_mirrorandflip_self_adapt)
+			{
+				s_ctrl->func_tbl->sensor_mirrorandflip_self_adapt(s_ctrl);
+			}
+	
         }
 	} else if (update_type == MSM_SENSOR_UPDATE_PERIODIC) {
 		CDBG("PERIODIC : %d\n", res);
@@ -854,6 +860,18 @@ int32_t msm_sensor_i2c_probe(struct i2c_client *client,
 	if (rc < 0)
 		goto probe_fail;
 
+	/******************************************************************
+	*	the codes below are to set the camera sensor name for project menu
+	*	set module match after sensor match
+	*	actuator is registerd in msm_sensor_register,and actuator is related to module
+	*	so should make sure of module info before msm_sensor_register
+	*******************************************************************/
+	if(s_ctrl->func_tbl->sensor_model_match)
+		s_ctrl->func_tbl->sensor_model_match(s_ctrl);
+	if(s_ctrl->sensor_name)
+		strncpy((char *)s_ctrl->sensordata->sensor_name, s_ctrl->sensor_name, CAMERA_NAME_LEN -1);
+	printk("the name for project menu is %s\n", s_ctrl->sensordata->sensor_name);
+	
 #ifdef CONFIG_HUAWEI_HW_DEV_DCT
 	/* detect current device successful, set the flag as present */
 	switch(s_ctrl->sensordata->camera_type)
@@ -897,12 +915,7 @@ int32_t msm_sensor_i2c_probe(struct i2c_client *client,
 	camera_node_succee[camera_slave_sensor] = 1;
     /*remove the mclk_self_adapt and put it before sensor power up*/
 #endif
-	/*the codes below are to set the camera sensor name for project menu*/
-	if(s_ctrl->func_tbl->sensor_model_match)
-		s_ctrl->func_tbl->sensor_model_match(s_ctrl);
-	if(s_ctrl->sensor_name)
-		strncpy((char *)s_ctrl->sensordata->sensor_name, s_ctrl->sensor_name, CAMERA_NAME_LEN -1);
-	printk("the name for project menu is %s\n", s_ctrl->sensordata->sensor_name);
+	/*remove module match and put it after sensor match*/
 	goto power_down;
 probe_fail:
 	pr_err("%s %s_i2c_probe failed\n", __func__, client->name);

@@ -43,8 +43,10 @@ enum gs_adi_reg {
 	GS_ADI_REG_ORIENT		= 0x3c,
 };
 
+/*<MSM7X25 hw modify --GSENSOR-- yuxuesong 20091125 £ºbegin */
 #define     GPIO_INT1                         19
 #define     GPIO_INT2                         20
+/* MSM7X25 hw modify --GSENSOR-- yuxuesong 20091125 £ºend>*/
 
 
 #define     GS_ADI_TIMRER                   (1000*1000000)    /*1s*/

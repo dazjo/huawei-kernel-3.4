@@ -135,10 +135,11 @@ static struct sequence otm8009a_chimei_lcd_init_table[] =
 	{0x00000,TYPE_PARAMETER,0},
 	{0x00000,TYPE_PARAMETER,0},
 
+	/* change to 1+2 dot inversion */
     {0x00000,MIPI_DCS_COMMAND,0},
 	{0x000B4,TYPE_PARAMETER,0},
 	{0x000C0,MIPI_GEN_COMMAND,0},
-	{0x00005,TYPE_PARAMETER,0},
+	{0x00011,TYPE_PARAMETER,0},
 
     {0x00000,MIPI_DCS_COMMAND,0},
 	{0x00082,TYPE_PARAMETER,0},
@@ -156,6 +157,12 @@ static struct sequence otm8009a_chimei_lcd_init_table[] =
 	{0x000D8,MIPI_GEN_COMMAND,0},
 	{0x000A7,TYPE_PARAMETER,0},
 	{0x000A7,TYPE_PARAMETER,0},
+
+    /*add vcom*/
+	{0x00000,MIPI_DCS_COMMAND,0},
+	{0x00000,TYPE_PARAMETER,0},
+	{0x000D9,MIPI_GEN_COMMAND,0},
+	{0x00074,TYPE_PARAMETER,0},
 
     {0x00000,MIPI_DCS_COMMAND,0},
 	{0x00081,TYPE_PARAMETER,0},
@@ -458,15 +465,16 @@ static struct sequence otm8009a_chimei_lcd_init_table[] =
 	{0x00000,TYPE_PARAMETER,0},
 	{0x00000,TYPE_PARAMETER,0},
 
+    /* change gamma 2.5 parameters to display better */
     {0x00000,MIPI_DCS_COMMAND,0},
 	{0x00000,TYPE_PARAMETER,0},
 	{0x000E1,MIPI_GEN_COMMAND,0},
 	{0x00000,TYPE_PARAMETER,0},
-    {0x0000D,TYPE_PARAMETER,0},
-    {0x00014,TYPE_PARAMETER,0},
-    {0x00000,TYPE_PARAMETER,0},
+    {0x0000E,TYPE_PARAMETER,0},
+    {0x00015,TYPE_PARAMETER,0},
+    {0x0000F,TYPE_PARAMETER,0},
     {0x00008,TYPE_PARAMETER,0},
-    {0x00011,TYPE_PARAMETER,0},
+    {0x00010,TYPE_PARAMETER,0},
     {0x0000B,TYPE_PARAMETER,0},
     {0x0000A,TYPE_PARAMETER,0},
     {0x00004,TYPE_PARAMETER,0},
@@ -474,7 +482,7 @@ static struct sequence otm8009a_chimei_lcd_init_table[] =
     {0x0000C,TYPE_PARAMETER,0},
     {0x00006,TYPE_PARAMETER,0},
     {0x0000E,TYPE_PARAMETER,0},
-    {0x0000B,TYPE_PARAMETER,0},
+    {0x0000A,TYPE_PARAMETER,0},
     {0x00006,TYPE_PARAMETER,0},
 	{0x00003,TYPE_PARAMETER,0},
 
@@ -482,11 +490,11 @@ static struct sequence otm8009a_chimei_lcd_init_table[] =
 	{0x00000,TYPE_PARAMETER,0},
 	{0x000E2,MIPI_GEN_COMMAND,0},
 	{0x00000,TYPE_PARAMETER,0},
-    {0x0000D,TYPE_PARAMETER,0},
-    {0x00014,TYPE_PARAMETER,0},
-    {0x00000,TYPE_PARAMETER,0},
+    {0x0000E,TYPE_PARAMETER,0},
+    {0x00015,TYPE_PARAMETER,0},
+    {0x0000F,TYPE_PARAMETER,0},
     {0x00008,TYPE_PARAMETER,0},
-    {0x00011,TYPE_PARAMETER,0},
+    {0x00010,TYPE_PARAMETER,0},
     {0x0000B,TYPE_PARAMETER,0},
     {0x0000A,TYPE_PARAMETER,0},
     {0x00004,TYPE_PARAMETER,0},
@@ -494,7 +502,7 @@ static struct sequence otm8009a_chimei_lcd_init_table[] =
     {0x0000C,TYPE_PARAMETER,0},
     {0x00006,TYPE_PARAMETER,0},
     {0x0000E,TYPE_PARAMETER,0},
-    {0x0000B,TYPE_PARAMETER,0},
+    {0x0000A,TYPE_PARAMETER,0},
     {0x00006,TYPE_PARAMETER,0},
     {0x00003,TYPE_PARAMETER,0},
 
@@ -546,9 +554,9 @@ int otm8009a_monitor_reg_status(struct msm_fb_data_type *mfd)
 {
 	
     struct dsi_buf *rp, *tp;
-	uint8 ret = 0; 
     uint8 err = 0;//ok
-
+    uint8 read_value[3]={0, 0, 0};
+	static uint32 count=0;
     tp = &otm8009a_tx_buf; 
     rp = &otm8009a_rx_buf; 
 	
@@ -556,49 +564,85 @@ int otm8009a_monitor_reg_status(struct msm_fb_data_type *mfd)
     mipi_dsi_buf_init(rp); 
 	
 	process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0A);
-
-	ret = *((unsigned char *)rp->data);
-		
-	if (0x9c != ret)
+	read_value[0] = *((unsigned char *)rp->data);
+	if (0x9c != read_value[0])
 	{
+		LCD_DEBUG("0x0a value0 = %02x\n",read_value[0]);
+		process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0A);
+		read_value[1] = *((unsigned char *)rp->data);
+		if (0x9c != read_value[1])
+	{
+			LCD_DEBUG("0x0a value1 = %02x\n",read_value[1]);
+			process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0A);	
+			read_value[2] = *((unsigned char *)rp->data);
+			if (0x9c != read_value[2])
+			{
+				LCD_DEBUG("0x0a value2 = %02x\n",read_value[2]);
 		err = 1;
-		LCD_DEBUG("0x0a value = %02x\n",ret);
+			}
+		}
 	}
 	
 	process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0B);
-
-	ret = *((unsigned char *)rp->data);
-		
-	if (0x40 != ret)
+	read_value[0] = *((unsigned char *)rp->data);		
+	if (0x40 != read_value[0])
 	{
+		LCD_DEBUG("0x0b value0 = %02x\n",read_value[0]);
+		process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0B);
+		read_value[1] = *((unsigned char *)rp->data);
+		if (0x40 != read_value[1])
+		{
+			LCD_DEBUG("0x0b value1 = %02x\n",read_value[1]);
+			process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0B);	
+			read_value[2] = *((unsigned char *)rp->data);
+			if (0x40 != read_value[2])
+	{
+				LCD_DEBUG("0x0b value2 = %02x\n",read_value[2]);
 		err = 2;
-		LCD_DEBUG("0x0b value = %02x\n",ret);
 	}
-
+		}
+	}
 	process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0C);
-
-	ret = *((unsigned char *)rp->data);
-		
-	if (0x07 != ret)
+	read_value[0] = *((unsigned char *)rp->data);		
+	if (0x07 != read_value[0])
 	{
+		LCD_DEBUG("0x0c value0 = %02x\n",read_value[0]);
+		process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0C);
+		read_value[1] = *((unsigned char *)rp->data);
+		if (0x07 != read_value[1])
+		{
+			LCD_DEBUG("0x0c value1 = %02x\n",read_value[1]);
+			process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0C);	
+			read_value[2] = *((unsigned char *)rp->data);
+			if (0x07 != read_value[2])
+			{
+				LCD_DEBUG("0x0c value2 = %02x\n",read_value[2]);
 		err = 3;
-		LCD_DEBUG("0x0c value = %02x\n",ret);
 	}
-
+		}
+	}
 	process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0D);
-
-	ret = *((unsigned char *)rp->data);
-		
-	if (0x00 != ret)
+	read_value[0] = *((unsigned char *)rp->data);		
+	if (0x00 != read_value[0])
 	{
+		LCD_DEBUG("0x0d value0 = %02x\n",read_value[0]);
+		process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0D);
+		read_value[1] = *((unsigned char *)rp->data);
+		if (0x00 != read_value[1])
+		{
+			LCD_DEBUG("0x0d value1 = %02x\n",read_value[1]);
+			process_mipi_read_table(mfd,tp,rp,(struct read_sequence*)&otm8009a_esd_read_table_0D);	
+			read_value[2] = *((unsigned char *)rp->data);
+			if (0x00 != read_value[2])
+	{
+				LCD_DEBUG("0x0d value2 = %02x\n",read_value[2]);
 		err = 4;
-		LCD_DEBUG("0x0d value = %02x\n",ret);
 	}
-
-	return err;
-	
+		}
 }
 	
+	return ((count++ < 3) ? 0 : err);	
+}
 
 static void lcd_esd_check(struct msm_fb_data_type *mfd)
 {

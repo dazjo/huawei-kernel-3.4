@@ -105,6 +105,7 @@ struct melfas_ts_data {
 	struct hrtimer timer;	
 	int (*power)(struct i2c_client* client, int on);
 	struct early_suspend early_suspend;
+	int finger_status[MELFAS_MAX_TOUCH];
 	
     bool is_first_point;
     bool use_touch_key;
@@ -737,6 +738,7 @@ static void clear_pressed_point_status(struct melfas_ts_data *ts)
 	{
 		for (i = 0; i < MELFAS_MAX_TOUCH; i++)
 		{
+            input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID,  i);
             input_report_abs(ts->input_dev, ABS_MT_POSITION_X,  0);
             input_report_abs(ts->input_dev, ABS_MT_POSITION_Y,  0);
             input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0);
@@ -812,7 +814,7 @@ static void melfas_ts_work_func(struct work_struct *work)
 	uint8_t touchAction = 0, touchType = 0, fingerID = 0;
 	int k = 0;
 	u8 finger_pressed_count = 0;
-
+	int prev_state = 0;
 	TS_DEBUG_MELFAS(KERN_ERR "melfas_ts_work_func\n");
 	if (ts == NULL)
 		MELFAS_DEBUG(KERN_ERR "melfas_ts_work_func : TS NULL\n"); 
@@ -911,8 +913,18 @@ static void melfas_ts_work_func(struct work_struct *work)
 	} 
 	if (ts->support_multi_touch)
 	{
-		for (i = 0; i < fingerID; i++)
+		for (i = 0; i < MELFAS_MAX_TOUCH; i++)
 		{
+			prev_state = ts->finger_status[i];
+			if (prev_state && (!g_Mtouch_info[i].action))  //previous state is down and current state is up means a release event
+		{
+				g_Mtouch_info[i].strength = g_Mtouch_info[i].fingerX = g_Mtouch_info[i].fingerY = 0;
+			}
+			else if ((!prev_state) && (!g_Mtouch_info[i].action))  //consecutive release event will not be handled
+			{
+				continue;
+			}
+            input_report_abs(ts->input_dev, ABS_MT_TRACKING_ID,  i);
             input_report_abs(ts->input_dev, ABS_MT_POSITION_X,  g_Mtouch_info[i].fingerX);
             input_report_abs(ts->input_dev, ABS_MT_POSITION_Y,  g_Mtouch_info[i].fingerY);
             input_report_abs(ts->input_dev, ABS_MT_TOUCH_MAJOR, g_Mtouch_info[i].strength);
@@ -920,7 +932,8 @@ static void melfas_ts_work_func(struct work_struct *work)
 			input_report_abs(ts->input_dev, ABS_MT_PRESSURE, g_Mtouch_info[i].strength);
 			input_mt_sync(ts->input_dev);	
 
-			if (g_Mtouch_info[i].strength)
+			ts->finger_status[i] = g_Mtouch_info[i].action;
+			if (g_Mtouch_info[i].action)
 				finger_pressed_count++;
         }
 		input_report_key(ts->input_dev, BTN_TOUCH, finger_pressed_count);
@@ -1132,6 +1145,7 @@ static int melfas_ts_probe(struct i2c_client *client, const struct i2c_device_id
 
     if(ts->support_multi_touch)
     {
+        input_set_abs_params(ts->input_dev, ABS_MT_TRACKING_ID, 0, MELFAS_MAX_TOUCH-1, 0, 0);
     	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_X, 0, lcd_x, 0, 0);
     	input_set_abs_params(ts->input_dev, ABS_MT_POSITION_Y, 0, lcd_y, 0, 0);
     	input_set_abs_params(ts->input_dev, ABS_MT_TOUCH_MAJOR, 0, 255, 0, 0);

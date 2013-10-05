@@ -1693,7 +1693,6 @@ static int __init msm8625_cpu_id(void)
 	case 0x771:
 	case 0x77C:
 	case 0x780:
-	case 0x785: /* Edge-only MSM8125-0 */
 	case 0x8D0:
 		cpu = MSM8625;
 		break;
@@ -1835,7 +1834,6 @@ static struct msm_cpr_config msm_cpr_pdata = {
 	.max_nom_freq = 700800,
 	.max_freq = 1401600,
 	.max_quot = 0,
-	.disable_cpr = false,
 	.vp_data = &vp_data,
 	.get_quot = msm_cpr_get_quot,
 	.clk_enable = msm_cpr_clk_enable,
@@ -1868,7 +1866,6 @@ static void __init msm_cpr_init(void)
 	}
 
 	msm_smem_get_cpr_info(cpr_info);
-	msm_cpr_pdata.disable_cpr = cpr_info->disable_cpr;
 
 	/**
 	 * Set the ring_osc based on efuse BIT(0)
@@ -1901,11 +1898,11 @@ static void __init msm_cpr_init(void)
 	 * Ditto for a 1.0GHz part.
 	 */
 	if (msm8625_cpu_id() == MSM8625A) {
-		msm_cpr_pdata.max_quot += 30;
+		msm_cpr_pdata.max_quot += 100;
 		if (msm_cpr_pdata.max_quot > 1400)
 			msm_cpr_pdata.max_quot = 1400;
 	} else if (msm8625_cpu_id() == MSM8625) {
-		msm_cpr_pdata.max_quot += 50;
+		msm_cpr_pdata.max_quot += 120;
 		if (msm_cpr_pdata.max_quot > 1350)
 			msm_cpr_pdata.max_quot = 1350;
 	}

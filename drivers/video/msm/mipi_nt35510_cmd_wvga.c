@@ -1476,7 +1476,10 @@ static int mipi_nt35510_lcd_off(struct platform_device *pdev)
 	if (mfd->key != MFD_KEY)
 		return -EINVAL;
 	/* clean up ack_err_status */
+	if(MIPI_CMD_NT35510_BOE_WVGA == lcd_panel_wvga)
+	{
 	mipi_nt35510_read_register(mfd);
+	}
 
 	process_mipi_table(mfd,&nt35510_tx_buf,(struct sequence*)&nt35510_wvga_standby_enter_table,
 		 ARRAY_SIZE(nt35510_wvga_standby_enter_table), lcd_panel_wvga);
@@ -1553,7 +1556,10 @@ static struct sequence nt35510_wvga_write_cabc_brightness_table[]=
 void nt35510_set_cabc_backlight(struct msm_fb_data_type *mfd,uint32 bl_level)
 {	
     /* clean up ack_err_status */
+	if(MIPI_CMD_NT35510_BOE_WVGA == lcd_panel_wvga)
+	{
 	mipi_nt35510_read_register(mfd);
+	}
     
     nt35510_wvga_write_cabc_brightness_table[1].reg = bl_level; 
 

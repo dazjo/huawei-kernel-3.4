@@ -80,7 +80,13 @@ DEVICE_ATTR(_pre##_##_name,_mode,_pre##_##_name##_show,_pre##_##_name##_store)
 #define SYN_I2C_RETRY_TIMES 10
 
 /* upgrade fw file path */
-#define TP_FW_COB_FILE_NAME  "/tp/1294018.img"
+#define TP_FW_COB_FILE_NAME  "/tp/1191601.img"
+/*Add cob FW for touch with independent button*/
+#define TP_BTN_FW_COB_FILE_NAME  "/tp/1315366_btn.img"
+int synap_button_map[MAX_BUTTON_NUM] = {0};
+int synap_button_num = 0;
+int button_flag = 0;
+
 #define TP_FW_FILE_NAME "/sdcard/update/synaptics.img"
 /*syn_version init */
 struct syn_version_config syn_version = 
@@ -242,6 +248,7 @@ u12 check_scope_X(u12 x)
 static int synaptics_rmi4_read_pdt(struct synaptics_rmi4 *ts)
 {
 	int ret = 0;
+	int retval = 0;
 	int nFd = 0;
 	int interruptCount = 0;
 	__u8 data_length = 0;
@@ -286,6 +293,7 @@ static int synaptics_rmi4_read_pdt(struct synaptics_rmi4 *ts)
 
 	ts->hasF11 = false;
 	ts->hasF19 = false;
+	ts->hasF1a = false;
 	ts->hasF30 = false;
 	ts->data_reg = 0xff;
 	ts->data_length = 0;
@@ -442,6 +450,62 @@ pdt_next_iter:
 		interruptCount += INTERRUPT_SOURCE_COUNT(fd.intSrc);
 	}
 
+	/*If button is enabled,Read f1a in reg page 2 */
+	if(button_flag)
+	{
+		/*check if rmi page is 2*/
+		retval = i2c_smbus_write_byte_data(ts->client, 0xff, 0x02);
+		if(retval < 0)
+		{
+			TS_DEBUG_RMI("failed to set rmi page\n");
+			ret = retval;
+		}
+		else
+		{
+			TS_DEBUG_RMI("set rmi page to two successfull\n");
+		}
+		for (fd_reg = FD_ADDR_MAX; fd_reg >= FD_ADDR_MIN; fd_reg -= FD_BYTE_COUNT)	   
+		{
+			ret = i2c_transfer(ts->client->adapter, fd_i2c_msg, 2);
+			if (ret < 0) 
+			{
+				printk(KERN_ERR "I2C read failed querying RMI4 $%02X capabilities\n", ts->client->addr);
+				return ret;
+			}
+			if (!fd.functionNumber) 
+			{
+				/* End of PDT */
+				ret = nFd;
+				TS_DEBUG_RMI("Read %d functions from PDT\n", fd.functionNumber);
+				break;
+			}
+			++nFd;
+
+			switch (fd.functionNumber) 
+			{
+				case 0x1a:
+			
+				ts->hasF1a = true;
+				ts->f1a.data_offset = fd.dataBase;
+				break;
+				default:
+					break;
+			}
+		
+		}
+		/*check if rmi page is 0*/
+		retval = i2c_smbus_write_byte_data(ts->client, 0xff, 0x00);
+		if(retval < 0)
+		{
+			TS_DEBUG_RMI("failed to set rmi page\n");
+			ret = retval;
+		}
+		else
+		{
+			TS_DEBUG_RMI("set rmi page to zero successfull\n");
+		}
+	
+	}
 	/* Now that PDT has been read, interrupt count determined, F01 data length can be determined.*/
 	ts->f01.data_length = data_length = 1 + ((interruptCount + 7) / 8);
 	/* Change to end address for comparison
@@ -492,7 +556,8 @@ static void synaptics_rmi4_work_func(struct work_struct *work)
 {
 	int ret;
     __u8 finger_status = 0x00;
-    
+	/* Add new variable */
+	int i = 0;
     __u8 reg = 0;
     __u8 *finger_reg = NULL;
     u12 x = 0;
@@ -644,19 +709,50 @@ static void synaptics_rmi4_work_func(struct work_struct *work)
 
         }
 
-		if (ts->hasF19 && interrupt[ts->f19.interrupt_offset] & ts->f19.interrupt_mask) 
+		/*Report button ,read reg F1A_0D_DATA00*/
+		if (ts->hasF1a)
         {
-			int reg;
-			int touch = 0;
-			for (reg = 0; reg < ((ts->f19.points_supported + 7) / 8); reg++)
+			static int last;
+			int toggled = 0;
+			uint8_t data = 0;
+			
+			/*check if rmi page is 2*/
+			ret = i2c_smbus_write_byte_data(ts->client, 0xff, 0x02);
+			if(ret < 0)
 			{
-				if (ts->data[ts->f19.data_offset + reg]) 
-                {
-					touch = 1;
-				   	break;
-				}
+				TS_DEBUG_RMI("failed to set rmi page\n");
 			}
-			input_report_key(ts->input_dev, BTN_DEAD, touch);
+			else
+                {
+				TS_DEBUG_RMI("set rmi page to two successfull\n");
+				}
+			
+			data = i2c_smbus_read_byte_data(ts->client, ts->f1a.data_offset);
+			if (data < 0) {
+				printk(KERN_INFO "[TP] synaptics f01_data fail\n");
+			}
+			
+			toggled = data ^ last;
+			for (i = 0;i < synap_button_num;i++)
+			{
+				if (toggled & (1<<i))
+					input_report_key(ts->input_dev, synap_button_map[i], data & (1<<i));
+					DBG_MASK("%s:button key_value=%d \n",__func__,synap_button_map[i]);
+			}
+			
+			last = data;
+			
+			/*check if rmi page is 0*/
+			ret = i2c_smbus_write_byte_data(ts->client, 0xff, 0x00);
+			if(ret < 0)
+			{
+				TS_DEBUG_RMI("failed to set rmi page\n");
+			}
+			else
+			{
+				TS_DEBUG_RMI("set rmi page to zero successfull\n");
+			}
+			//input_report_key(ts->input_dev, BTN_DEAD, toggled);
 
 		}
     	input_sync(ts->input_dev);
@@ -1511,7 +1607,15 @@ static int synaptics_cob_upgrade(struct i2c_client *client)
 	for (i = 0 ; i < 2; i++) 
 	{
 		/* manual upgrade */
+		/*check whether v_key or button*/
+		if(g_ts->hasF1a)
+		{
+			ret= i2c_update_firmware(client,TP_BTN_FW_COB_FILE_NAME);
+		}
+		else
+		{
 		ret= i2c_update_firmware(client,TP_FW_COB_FILE_NAME);  
+		}
 		if (0 == ret)
 		{
 			break;
@@ -1557,10 +1661,12 @@ err_handle_fail:
 }
 
 /*COB handle*/
+/*check config ,v_key or button*/
 static int synaptics_cob_handle(struct i2c_client *client)
 {
     int ret = 0;
     int i = 0;
+    int pr_ver = 0;
 	uint8_t data = 0;
 	int module_id = 0;
 	uint8_t *p_config = NULL;
@@ -1637,7 +1743,17 @@ static int synaptics_cob_handle(struct i2c_client *client)
 	/*Default need upgrade fw*/
 	if (NEED_UPDATE_FW == is_need_update_fw())
 	{
-	    if(CURRENT_PR_VERSION != syn_version.syn_firmware_version)
+		if (g_ts->hasF1a) 
+		{
+			pr_ver = CURRENT_PR_VERSION_BTN;
+			printk("%s: pr_ver = %d \n", __func__,pr_ver);
+		}
+		else
+		{
+			pr_ver = CURRENT_PR_VERSION;
+			printk("%s: pr_ver = %d \n", __func__,pr_ver);
+		}
+	    if(pr_ver != syn_version.syn_firmware_version)
 	    {
 		    ret = synaptics_cob_upgrade(client);
 			if(ret < 0)
@@ -1649,7 +1765,7 @@ static int synaptics_cob_handle(struct i2c_client *client)
 	}
 
 	/* update module config, enable touchscreen was operator */
-	if((NULL != p_config) && (CURRENT_PR_VERSION == syn_version.syn_firmware_version))
+	if((NULL != p_config) && (pr_ver == syn_version.syn_firmware_version))
 	{
 		ret = syn_config_update(g_ts, p_config);
 		if (ret < 0) 
@@ -1679,7 +1795,7 @@ static int synaptics_cob_handle(struct i2c_client *client)
 	}
 
 	/*write lockdow date */
-    if(CURRENT_PR_VERSION == syn_version.syn_firmware_version)
+    if(pr_ver == syn_version.syn_firmware_version)
     {
         ret = RMI4_enable_program(client);
 		if (ret < 0) 
@@ -1749,6 +1865,7 @@ static int synaptics_rmi4_probe(
     /*when the probe is come in we first detect the probe for touch is ready?*/
     struct touch_hw_platform_data *touch_pdata = NULL;
     struct tp_resolution_conversion tp_type_self_check = {0};
+	struct tp_button_map tp_button_map = {0};
     
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) 
     {
@@ -1779,6 +1896,39 @@ static int synaptics_rmi4_probe(
         	printk(KERN_ERR "%s: it's the first touch driver! \n", __func__);
     	}
     }
+
+	/*Add for touch with independent button*/
+	if(touch_pdata->read_button_flag)
+	{
+		button_flag = touch_pdata->read_button_flag();
+		if(1 == button_flag)
+		{
+			TS_DEBUG_RMI("%s: the touch has button! \n", __func__);
+		}
+		else
+		{
+			TS_DEBUG_RMI("%s: the touch has virtual_key! \n", __func__);
+		}
+	}
+	
+	if(touch_pdata->get_touch_button_map)
+	{
+		ret = touch_pdata->get_touch_button_map(&tp_button_map);
+		if(ret)
+		{
+			synap_button_num = tp_button_map.button_num;
+			for( i=0;i<synap_button_num;i++)
+			{
+				synap_button_map[i] = tp_button_map.button_map[i];
+			}
+			TS_DEBUG_RMI("%s: the touch has %d buttons! \n", __func__,synap_button_num);
+		}
+		else
+		{
+			TS_DEBUG_RMI("%s: the touch has no button! \n", __func__);
+		}
+	}
+	
     if(touch_pdata->touch_power)
     {
         ret = touch_pdata->touch_power(1);
@@ -1942,6 +2092,16 @@ static int synaptics_rmi4_probe(
 	set_bit(ABS_Y, g_ts->input_dev->absbit);
     set_bit(KEY_NUMLOCK, g_ts->input_dev->keybit);
 	set_bit(INPUT_PROP_DIRECT,g_ts->input_dev->propbit);
+	if (g_ts->hasF1a) 
+	{
+		/*if use button,the sensor area is the same as LCD*/
+		lcd_all = tp_type_self_check.lcd_y;
+		/*init the input key value*/
+		for( i=0;i<synap_button_num;i++)
+		{
+			input_set_capability(g_ts->input_dev, EV_KEY,synap_button_map[i]);
+		}
+	}
 /*we removed it to here to register the touchscreen first */
 	ret = input_register_device(g_ts->input_dev);
 	if (ret) 

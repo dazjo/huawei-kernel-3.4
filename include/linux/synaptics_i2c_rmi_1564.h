@@ -108,6 +108,10 @@ struct synaptics_rmi4 {
 	int hasF19;
 	struct rmi_function_info f19;
 
+	/*s2202 use F1a to achieve button function*/
+	int hasF1a;
+	struct rmi_function_info f1a;
+	
 	int hasF30;
 	struct rmi_function_info f30;
 

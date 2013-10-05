@@ -206,6 +206,7 @@ static const struct nla_policy nl80211_policy[NL80211_ATTR_MAX+1] = {
 	[NL80211_ATTR_NOACK_MAP] = { .type = NLA_U16 },
 	[NL80211_ATTR_INACTIVITY_TIMEOUT] = { .type = NLA_U16 },
 	[NL80211_ATTR_BG_SCAN_PERIOD] = { .type = NLA_U16 },
+	[NL80211_ATTR_MAX_ASSOC]={.type = NLA_U32},
 };
 
 /* policy for the key attributes */
@@ -2176,6 +2177,10 @@ static int nl80211_start_ap(struct sk_buff *skb, struct genl_info *info)
 		nla_get_u32(info->attrs[NL80211_ATTR_BEACON_INTERVAL]);
 	params.dtim_period =
 		nla_get_u32(info->attrs[NL80211_ATTR_DTIM_PERIOD]);
+	if(info->attrs[NL80211_ATTR_MAX_ASSOC])
+	{
+		params.max_assoc = nla_get_u32(info->attrs[NL80211_ATTR_MAX_ASSOC]);
+	}
 
 	err = cfg80211_validate_beacon_int(rdev, params.beacon_interval);
 	if (err)

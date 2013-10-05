@@ -27,6 +27,8 @@
 #include "msm_actuator.h"
 #include "msm_vfe32.h"
 #include "msm_camera_eeprom.h"
+#include <linux/jiffies.h>
+#define SERVER_WAIT_TIME_LIMIT 10 //10ms
 
 #define MSM_MAX_CAMERA_SENSORS 5
 
@@ -280,7 +282,8 @@ static int msm_server_control(struct msm_cam_server_dev *server_dev,
 	struct v4l2_event v4l2_evt;
 	struct msm_isp_event_ctrl *isp_event;
 	void *ctrlcmd_data;
-
+	unsigned long start_time = 0;
+	unsigned int cost_time = 0;
 	event_qcmd = kzalloc(sizeof(struct msm_queue_cmd), GFP_KERNEL);
 	if (!event_qcmd) {
 		pr_err("%s Insufficient memory. return", __func__);
@@ -334,6 +337,7 @@ static int msm_server_control(struct msm_cam_server_dev *server_dev,
 					  &v4l2_evt);
 	D("%s v4l2_event_queue: type = 0x%x\n", __func__, v4l2_evt.type);
 	mutex_unlock(&server_dev->server_queue_lock);
+	start_time = jiffies;
 
 	/* wait for config return status */
 	D("Waiting for config status\n");
@@ -341,6 +345,19 @@ static int msm_server_control(struct msm_cam_server_dev *server_dev,
 		!list_empty_careful(&queue->list),
 		msecs_to_jiffies(out->timeout_ms));
 	D("Waiting is over for config status\n");
+	/*The process receives a signal and wakes up prematurely before its timeout expired or the event of interest occurred.*/
+	cost_time = (jiffies-start_time)*1000/HZ;
+	while(rc == -ERESTARTSYS && (out->timeout_ms > (cost_time+SERVER_WAIT_TIME_LIMIT)))
+	{
+		printk(KERN_ERR "%s: type=%d, timeout_ms=%dms, left time=%dms, rc return -ERESTARTSYS, retry now\n",
+			__func__,out->type,out->timeout_ms,(out->timeout_ms-cost_time));
+
+		rc = wait_event_interruptible_timeout(queue->wait,
+			!list_empty_careful(&queue->list),
+			msecs_to_jiffies(out->timeout_ms-cost_time));
+
+		cost_time = (jiffies-start_time)*1000/HZ;
+	}
 	if (list_empty_careful(&queue->list)) {
 		if (!rc)
 			rc = -ETIMEDOUT;

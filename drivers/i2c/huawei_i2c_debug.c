@@ -3,6 +3,7 @@
 * used to debug i2c devices.
 *
 * Copyright (c) 2011 huawei 
+* Author: mazhenhua 
 *
 * This file may be distributed under the terms of the GNU GPL license.
 */

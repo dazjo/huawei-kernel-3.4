@@ -20,15 +20,8 @@
 #define LSB                             0
 
 #include <linux/gpio.h>
-
-enum S5k4E1_MODE_TYPE
-{
-	S5k4E1_MODE_LITEON,
-	S5k4E1_MODE_SAMSUNG,
-};
-
+/*added struct is no use if the number of module is more than two*/
 #define S5k4E1_CAMERA_ID_GPIO 9
-static enum S5k4E1_MODE_TYPE s5k4e1_mode_type = S5k4E1_MODE_LITEON;
 
 DEFINE_MUTEX(s5k4e1_mut);
 static struct msm_sensor_ctrl_t s5k4e1_s_ctrl;
@@ -990,8 +983,20 @@ int32_t s5k4e1_sensor_i2c_probe(struct i2c_client *client,
 {
 	int rc = 0;
 	struct msm_camera_sensor_info *s_info;
+	struct msm_sensor_ctrl_t *s_ctrl;
 
-	rc = msm_sensor_i2c_probe(client, id);
+	/* sensor_i2c_addr maybe different for different module*/
+	/* set sensor_i2c_addr to corresponding value to probe the same sensor repeatedly*/
+	s_ctrl = (struct msm_sensor_ctrl_t *)(id->driver_data);
+	s_ctrl->sensor_i2c_addr=0x6E;
+	if((rc = msm_sensor_i2c_probe(client, id)) < 0)
+	{
+		s_ctrl->sensor_i2c_addr=0x20;
+		if((rc = msm_sensor_i2c_probe(client, id)) < 0)
+		{
+			return rc;
+		}
+	}
 
 	s_info = client->dev.platform_data;
 	if (s_info == NULL) {
@@ -999,7 +1004,10 @@ int32_t s5k4e1_sensor_i2c_probe(struct i2c_client *client,
 		return -EFAULT;
 	}
 
-	if (s_info->actuator_info->vcm_enable) {
+	if (s_info->actuator_info)
+	{
+		if(s_info->actuator_info->vcm_enable)
+		{
 		rc = gpio_request(s_info->actuator_info->vcm_pwd,
 				"msm_actuator");
 		if (rc < 0)
@@ -1010,6 +1018,7 @@ int32_t s5k4e1_sensor_i2c_probe(struct i2c_client *client,
 			pr_err("%s: gpio:msm_actuator %d direction can't be set\n",
 				__func__, s_info->actuator_info->vcm_pwd);
 		gpio_free(s_info->actuator_info->vcm_pwd);
+	}
 	}
 
 	return rc;
@@ -1052,36 +1061,71 @@ static struct v4l2_subdev_ops s5k4e1_subdev_ops = {
 	.core = &s5k4e1_subdev_core_ops,
 	.video  = &s5k4e1_subdev_video_ops,
 };
+
+int32_t s5k4e1_mirrorandflip_self_adapt(struct msm_sensor_ctrl_t *s_ctrl)
+{
+	int32_t rc = 0;
+	CDBG("%s is called !\n", __func__);
+	rc = msm_camera_i2c_write(
+		s_ctrl->sensor_i2c_client,
+		0x0101, 0x00,
+		MSM_CAMERA_I2C_BYTE_DATA);
+	if (rc < 0) 
+{
+		pr_err("%s: write register error\n", __func__);
+	}
+	
+	return rc;
+}
+
 static int32_t s5k4e1_sensor_model_match(struct msm_sensor_ctrl_t *s_ctrl)
 {
-
-	//check mode type
+	/*the sensor_i2c_addr is the same for liteon and  samsuny,different for others*/
+	/*so camera_id is used to distinguish liteon and samsuny and sensor_i2c_addr is used to distinguish others */
+	switch(s_ctrl->sensor_i2c_addr)
+	{
+		case 0x6E:
+		{
 	if(!gpio_request(S5k4E1_CAMERA_ID_GPIO,  "s5k4e1"))
 	{
 		/* if the moudle is liteon, the value is 0, if the moudle is samsuny,the value is 1 */
-		if(gpio_get_value(S5k4E1_CAMERA_ID_GPIO) == 1)
+				if(1 == gpio_get_value(S5k4E1_CAMERA_ID_GPIO))
 		{
-			s5k4e1_mode_type = S5k4E1_MODE_SAMSUNG;
+					if(check_product_y300_for_camera())
+					{
+						strncpy((char *)s_ctrl->sensor_name, "23060110FA-SAM-3-Y300", sizeof("23060110FA-SAM-3-Y300"));
+					}
+					else
+					{
+						strncpy((char *)s_ctrl->sensor_name, "23060110FA-SAM-3", sizeof("23060110FA-SAM-3"));
+					}
 		}
 		else
 		{
-			s5k4e1_mode_type = S5k4E1_MODE_LITEON;
+					strncpy((char *)s_ctrl->sensor_name, "23060069FA-SAM-L", sizeof("23060069FA-SAM-L"));
 		}
 		gpio_free(S5k4E1_CAMERA_ID_GPIO);
 	}
 	else
 	{
 		printk("%s: gpio request fail\n",__func__);
-		s5k4e1_mode_type = S5k4E1_MODE_LITEON;
+				strncpy((char *)s_ctrl->sensor_name, "23060069FA-SAM-L", sizeof("23060069FA-SAM-L"));
 	}
 
-    if(s5k4e1_mode_type == S5k4E1_MODE_SAMSUNG)
-    {
-        strncpy((char *)s_ctrl->sensor_name, "23060069FA-SAM-3", strlen("23060069FA-SAM-3"));
+			break;
     }
-    else
+		case 0x20:
     {
-        strncpy((char *)s_ctrl->sensor_name, "23060069FA-SAM-L", strlen("23060069FA-SAM-L"));
+			strncpy((char *)s_ctrl->sensor_name, "23060084FF-SAM-F", sizeof("23060084FF-SAM-F"));
+			/*the image rotate 180 for foxcom module*/
+			/*foxcom module need write 0x0101,liteon and samsuny  module not */
+			s_ctrl->func_tbl->sensor_mirrorandflip_self_adapt=s5k4e1_mirrorandflip_self_adapt;
+			/* the Foxcom module is FF*/
+			s_ctrl->sensordata->actuator_info = NULL;
+			break;
+		}
+		default:
+		break;
     }
 	
 	return 0;

@@ -45,6 +45,8 @@
 /* add log switch, control logmian ect logs can write in or not */
 static atomic_t log_switch = ATOMIC_INIT(USER_LOG_OFF);
 static int minor_of_exception = 0;
+static int minor_of_events = 0;
+static int minor_of_main = 0;
 static int minor_of_power = 0;
 #endif
 struct log_ctl{
@@ -462,6 +464,67 @@ static ssize_t do_write_log_from_user(struct logger_log *log,
 	return count;
 }
 
+#ifdef CONFIG_HUAWEI_KERNEL
+/*
+ * get_log_entry - get the log priority and tag from iov structure
+ *
+ */
+static void get_log_entry(const struct iovec *iov, unsigned long nr_segs, char *priority, char *tag, int taglen)
+{
+    int minlen = 0;
+    int index = 0;
+    
+    if ((NULL == iov) || (NULL == priority) || (NULL == tag))
+    {
+        return;
+    }
+    
+    while (nr_segs-- > 0)
+    { 
+        if (NULL == iov->iov_base)
+        {
+            return;
+        }
+        
+        if (0 == index)
+        {
+            if (1 != iov->iov_len)
+            {
+                *priority = 0;
+            }
+            else
+            {
+                /* Replace with copy_from_user to solve device crash issue when monkey testing */
+                if (copy_from_user(priority, iov->iov_base, iov->iov_len))
+                {
+                    printk("copy_from_user error, can't get the log priority\n");
+                    return;
+                }
+            }
+        }
+        else if (1 == index)
+        {
+            minlen = iov->iov_len > taglen ? taglen : iov->iov_len;
+            /* Replace memcpy with copy_from_user to solve device crash issue when monkey testing */
+            if (copy_from_user(tag, iov->iov_base, minlen))
+            {
+                printk("copy_from_user error, can't get the log tag\n");
+                return;
+            }
+        }
+        else
+        {
+            break;
+        }
+        
+        index++;
+        iov++;
+    }
+    
+    return;
+}
+#endif
+
 /*
  * logger_aio_write - our write method, implementing support for write(),
  * writev(), and aio_write(). Writes are our fast path, and we try to optimize
@@ -476,11 +539,20 @@ ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	struct timespec now;
 	ssize_t ret = 0;
 
+#ifdef CONFIG_HUAWEI_KERNEL
+    char priority = 0;
+    char tag[MAX_TAG_LEN] = {0};
+    get_log_entry(iov, nr_segs, &priority, tag, sizeof(tag));
+    tag[sizeof(tag) - 1] = 0;
+#endif    
+    
     /* delete temp code in update J baseline */
 #if defined(CONFIG_HUAWEI_KERNEL)
     /* log control */
+    /* if log device is events or main which its priority is more than ANDROID_LOG_INFO, we also pass it */
     if (USER_LOG_ON == atomic_read(&log_switch) || minor_of_exception == log->misc.minor
-        || minor_of_power == log->misc.minor )
+        || minor_of_power == log->misc.minor || minor_of_events == log->misc.minor 
+        || ((minor_of_main == log->misc.minor) && (priority >= ANDROID_LOG_INFO)))
     {
         /* log it */
     }
@@ -961,6 +1033,10 @@ static int __init logger_init(void)
     /* record the minor of exception node */
     minor_of_exception = log_exception.misc.minor;
     minor_of_power = log_power.misc.minor;
+    minor_of_events = log_events.misc.minor;
+    minor_of_main = log_main.misc.minor;
+    printk("%s, minor_of_events=%d\n", __FUNCTION__, minor_of_events);
+    printk("%s, minor_of_main=%d\n", __FUNCTION__, minor_of_main);
     printk("%s, minor_of_exception=%d\n", __FUNCTION__, minor_of_exception);
 
     ret = misc_register(&log_switch_misc_dev);

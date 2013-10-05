@@ -188,8 +188,7 @@ int tps61310_set_flash(unsigned led_state)
          break;
 
     default:
-        tps61310_i2c_write( tps61310_client, 0x00, 0x80 );
-        gpio_set_value(tps61310_strb0, 0);
+		/* Deal with nothing here. */
         break;
     }
 

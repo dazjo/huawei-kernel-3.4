@@ -427,6 +427,7 @@ struct cfg80211_ap_settings {
 	bool privacy;
 	enum nl80211_auth_type auth_type;
 	int inactivity_timeout;
+	unsigned int max_assoc;
 };
 
 /**

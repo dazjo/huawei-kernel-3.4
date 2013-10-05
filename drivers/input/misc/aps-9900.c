@@ -899,6 +899,13 @@ static int aps_9900_probe(
         aps9900_init_regdata[4].data = 8; //to increase the sensor sensitivity
         p = &lsensor_adc_table_H867G[0];
     }
+    else if( machine_is_msm8x25_H881C() 
+        || machine_is_msm8x25_Y301_A1())
+    {
+       	apds_9900_pwindows_value = H881C_WINDOW;
+       	apds_9900_pwave_value = H881C_WAVE;
+       	p = &lsensor_adc_table_h881c[0];
+    }
     else
     {
         /* do nothing */

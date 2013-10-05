@@ -521,7 +521,8 @@ static int get_touch_resolution(struct tp_resolution_conversion *tp_resolution_t
 		|| machine_is_msm8x25_U8833D()
 		|| machine_is_msm8x25_U8833()        
 		|| machine_is_msm8x25_H881C()
-		|| machine_is_msm8x25_C8812P())
+		|| machine_is_msm8x25_C8812P()
+		|| machine_is_msm8x25_Y301_A1())
 	{
 		tp_resolution_type->lcd_x = LCD_X_WVGA;
 		tp_resolution_type->lcd_y = LCD_Y_WVGA;   
@@ -561,6 +562,46 @@ static int get_touch_resolution(struct tp_resolution_conversion *tp_resolution_t
 	return 1;
 }
 
+/*If product has independent button ,return 1*/
+static int read_button_flag(void)
+{
+	if(machine_is_msm8x25_Y301_A1())
+	{
+		return 1 ;
+	}
+	else 
+	{
+		return 0 ;
+	}
+}
+
+/*If product has independent button ,init the button map*/
+static int get_touch_button_map(struct tp_button_map *tp_button_map)
+{	
+	int button_num = 0;
+	int button_map[MAX_BUTTON_NUM] = {0};
+	int i = 0;
+	
+	if(machine_is_msm8x25_Y301_A1())
+	{
+		button_map[0] = KEY_BACK;
+		button_map[1] = KEY_HOME;
+		button_map[2] = KEY_MENU;
+		button_num = 3;
+	}
+	else 
+	{
+		return 0 ;
+	}
+	
+	tp_button_map->button_num = button_num;
+	for(i=0;i<button_num;i++)
+	{
+		tp_button_map->button_map[i] = button_map[i];
+	}
+	return 1;
+}
+
 static struct touch_hw_platform_data touch_hw_data = 
 {
 	.touch_power = power_switch,
@@ -570,6 +611,8 @@ static struct touch_hw_platform_data touch_hw_data =
 	.touch_reset = touch_reset,
 	.get_touch_reset_gpio = get_touch_reset_gpio,
 	.get_touch_resolution = get_touch_resolution,
+	.read_button_flag = read_button_flag,
+	.get_touch_button_map = get_touch_button_map,
 };
 
 /* -------------------- huawei sensors -------------------- */

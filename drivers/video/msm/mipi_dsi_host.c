@@ -1497,9 +1497,10 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 	wmb();
 	spin_unlock_irqrestore(&dsi_mdp_lock, flags);
 
+	/* remove otm8009a panel */
+	/* remove hx8369a panel */
     /* judge the panel type */
-    if( (MIPI_CMD_HX8369A_TIANMA_FWVGA == panel_type)
-        || (MIPI_CMD_OTM8009A_CHIMEI_WVGA == panel_type)
+    if( ((MIPI_CMD_OTM8009A_CHIMEI_WVGA == panel_type) && LCD_OTM8009A_CMI_ESD_SIGN)
         || (MIPI_CMD_NT35510_BOE_FWVGA == panel_type)
         || (MIPI_CMD_NT35510_BOE_WVGA == panel_type)
         || (MIPI_CMD_NT35510_CHIMEI_WVGA == panel_type))

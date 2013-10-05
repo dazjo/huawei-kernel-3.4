@@ -165,12 +165,7 @@ int32_t msm_actuator_write_focus(
 	uint16_t damping_code_step = 0;
 	uint16_t wait_time = 0;
 
-	/* As the damping_step is very large, so we won't be into the loop behind
-	* which result the actuator move the destination by once time. Bigger 
-	* movement, bigger noise. So we change it to step size in current region 
-	* to make this movement more slightly .
-	*/
-	damping_code_step = a_ctrl->region_params[a_ctrl->curr_region_index].code_per_step;
+	damping_code_step = damping_params->damping_step;
 	wait_time = damping_params->damping_delay;
 
 	/* Write code based on damping_code_step in a loop */
@@ -419,8 +414,7 @@ int32_t msm_actuator_init(struct msm_actuator_ctrl_t *a_ctrl,
 	}
 	a_ctrl->total_steps = set_info->af_tuning_params.total_steps;
 	a_ctrl->pwd_step = set_info->af_tuning_params.pwd_step;
-	a_ctrl->total_steps = set_info->af_tuning_params.total_steps;
-
+	//delete this line for it is a duplicated written as the line before
 	if (copy_from_user(&a_ctrl->region_params,
 		(void *)set_info->af_tuning_params.region_params,
 		a_ctrl->region_size * sizeof(struct region_params_t)))

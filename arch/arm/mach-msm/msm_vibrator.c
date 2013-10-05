@@ -22,7 +22,7 @@
 #include <linux/module.h>
 #include "pmic.h"
 #include "timed_output.h"
-
+#include <linux/hardware_self_adapt.h>
 #include <mach/msm_rpcrouter.h>
 
 #ifdef CONFIG_HUAWEI_EVALUATE_POWER_CONSUMPTION 
@@ -30,7 +30,7 @@
 #endif
 #include <linux/delay.h>
 #define VIBRATOR_DELAY 20
-#define VIBRATOR_MIN 50
+#define VIBRATOR_MIN 10
 #define PM_LIBPROG      0x30000061
 #ifndef CONFIG_HUAWEI_FEATURE_VIBRATOR
 #if (CONFIG_MSM_AMSS_VERSION == 6220) || (CONFIG_MSM_AMSS_VERSION == 6225)
@@ -48,10 +48,8 @@
 //adapt the operating voltage of vibrator to its rated voltage
 #ifndef CONFIG_HUAWEI_FEATURE_VIBRATOR
 #define HTC_PROCEDURE_SET_VIB_ON_OFF	21
-#define PMIC_VIBRATOR_LEVEL	(2700)
 #else
 #define HW_PROCEDURE_SET_VIB_ON_OFF	22
-#define PMIC_VIBRATOR_LEVEL	(2700)
 #endif
 static struct work_struct work_vibrator_on;
 static struct work_struct work_vibrator_off;
@@ -71,7 +69,7 @@ static void set_pmic_vibrator(int on)
 	}
 
 	if (on)
-		rc = pmic_vib_mot_set_volt(PMIC_VIBRATOR_LEVEL);
+		rc = pmic_vib_mot_set_volt(get_vibrator_voltage());
 	else
 		rc = pmic_vib_mot_set_volt(0);
 
@@ -105,9 +103,9 @@ static void set_pmic_vibrator(int on)
 	if (on)
 	{
 		#ifndef CONFIG_HUAWEI_SETTING_TIMER_FOR_VIBRATOR_OFF
-		req.data = cpu_to_be32(PMIC_VIBRATOR_LEVEL);
+		req.data = cpu_to_be32(get_vibrator_voltage());
 		#else
-		req.vib_volt = cpu_to_be32(PMIC_VIBRATOR_LEVEL); 
+		req.vib_volt = cpu_to_be32(get_vibrator_voltage()); 
 		req.vib_time = cpu_to_be32(time_value); 
 		#endif
 	}
@@ -176,7 +174,6 @@ static void vibrator_enable(struct timed_output_dev *dev, int value)
 #else
 static void vibrator_enable(struct timed_output_dev *dev, int value)
 {
-	time_value = value;//save this value as vibratting time
     /* detele */
 	if (value == 0)
 	{
@@ -187,7 +184,7 @@ static void vibrator_enable(struct timed_output_dev *dev, int value)
 	else {
 		value = (value > 15000 ? 15000 : value);
 		value = (value < VIBRATOR_MIN ? VIBRATOR_MIN : value);
-
+		time_value = value;
 		//timed_vibrator_on(dev);
 		pmic_vibrator_on(NULL);//use this function instead of timed_vibrator_on.
     /* detele */

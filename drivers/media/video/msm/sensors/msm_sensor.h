@@ -153,6 +153,7 @@ struct msm_sensor_fn_t {
 	int32_t (*sensor_set_effect)(struct msm_sensor_ctrl_t *, int);
     int (*sensor_otp_reading)(struct sensor_cfg_data *cfg);
     void (*sensor_mclk_self_adapt)(struct msm_sensor_ctrl_t *);
+	int32_t (*sensor_mirrorandflip_self_adapt)(struct msm_sensor_ctrl_t *);
 };
 
 struct msm_sensor_csi_info {

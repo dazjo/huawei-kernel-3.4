@@ -3,6 +3,7 @@
  *
  *
  * Changes:
+ * mazhenhua      :  for read appboot version and flash id.
  */
 
 #include <linux/types.h>
@@ -96,6 +97,7 @@ const s_board_hw_version_type s_board_hw_version_table[] =
    {MACH_TYPE_MSM8X25_C8833D,	"MSM8X25_C8833D",	"HD1C8833M "},
    {MACH_TYPE_MSM8X25_C8813,	"MSM8X25_C8813",	"HC1C8813M "},
    {MACH_TYPE_MSM8X25_H881C,	"MSM8X25_H881C",	"HC1H881CM "},
+   {MACH_TYPE_MSM8X25_Y301_A1,	"MSM8X25_Y301_A1",	"HD1Y301A1M "},
    {MACH_TYPE_MSM8X25_C8825D,"MSM8X25_C8825D","HC1C8825M "},
    {MACH_TYPE_MSM8X25_U8825D,"MSM8X25_U8825D","HD1U8825M "},
    {MACH_TYPE_MSM8X25_U8825,"MSM8X25_U8825","HD2U8825M "},
@@ -238,6 +240,14 @@ static void set_s_board_hw_version_special(char *hw_version_id,char *hw_version_
        strcat(hw_version_id, hw_version_sub_ver);
        hw_version_id[HW_VERSION-1] = '\0';
     }
+
+    if((HW_VER_SUB_VE == get_hw_sub_board_id()) &&
+           (MACH_TYPE_MSM7X27A_H867G == machine_arch_type))
+    {
+       hw_version_id[strlen(hw_version_id) - 1] = 'B';
+       hw_version_id[HW_VERSION-1] = '\0';
+    }
+
     /* change the boardid name in the file of app_info according to the boardid sub version*/
     /* HW_VER_U8951_VC is used as HW_VER_U8951N_1_VA, and is recorded as MSM8X25_U8951-1.VerC in app_info;
      * HW_VER_U8951_VB is used as HW_VER_U8951_51_VA, and is recorded as MSM8X25_U8951-51.VerA in app_info;

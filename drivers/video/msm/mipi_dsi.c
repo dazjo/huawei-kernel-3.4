@@ -561,7 +561,6 @@ static int mipi_dsi_probe(struct platform_device *pdev)
 	}
 
 	if (mfd->index == 0)
-/* Always inport 24 bit*/
 #ifndef CONFIG_HUAWEI_KERNEL	
 		mfd->fb_imgType = MSMFB_DEFAULT_TYPE;
 #else

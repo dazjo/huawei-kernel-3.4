@@ -1329,8 +1329,8 @@ static int netlink_sendmsg(struct kiocb *kiocb, struct socket *sock,
 	if (NULL == siocb->scm)
 		siocb->scm = &scm;
 
+    /* merge google security patch */
 	err = scm_send(sock, msg, siocb->scm, true);
-
 	if (err < 0)
 		return err;
 

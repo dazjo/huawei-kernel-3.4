@@ -842,6 +842,8 @@ static void msmfb_early_suspend(struct early_suspend *h)
 		memset32_io((void *)fbi->screen_base, 0x00, fbi->fix.smem_len);
 		break;
 	}
+/* Clean cache before dma */
+	dma_cache_pre_ops((void *)fbi->screen_base, fbi->fix.smem_len, DMA_TO_DEVICE);
 #endif
 	msm_fb_suspend_sub(mfd);
 
