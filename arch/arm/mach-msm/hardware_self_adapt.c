@@ -814,7 +814,8 @@ SIDE EFFECTS
 uint get_vibrator_voltage(void)
 {
     if(machine_is_msm7x27a_H867G() || 
-       machine_is_msm7x27a_H868C()  )
+       machine_is_msm7x27a_H868C() ||
+       machine_is_msm7x27a_U8815()  )
     {
         return 3000;
     }
