@@ -181,12 +181,13 @@ struct bt_device bt_device_array[] =
 hw_bt_device_model get_hw_bt_device_model(void)
 {
     if(machine_is_msm8x25_U8950D()
-	  || machine_is_msm8x25_U8950()
+      || machine_is_msm8x25_U8950()
       || machine_is_msm7x27a_H867G()
       || machine_is_msm8x25_H881C()
       || machine_is_msm7x27a_H868C()	
       || machine_is_msm8x25_C8950D()
-      || machine_is_msm8x25_Y301_A1())
+      || machine_is_msm8x25_Y301_A1()
+      || machine_is_msm7x27a_U8815())
     {
         return BT_BCM4330;
     }
