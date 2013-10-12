@@ -1212,7 +1212,8 @@ bool board_support_flash(void)
         || machine_is_msm8x25_U8951()
         || machine_is_msm8x25_C8813()
         || machine_is_msm8x25_H881C()	
-        || machine_is_msm8x25_U8950())
+        || machine_is_msm8x25_U8950()
+        || machine_is_msm7x27a_U8815())
 	 {
 		 return true;
 	 }
