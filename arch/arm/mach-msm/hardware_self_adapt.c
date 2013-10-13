@@ -29,6 +29,11 @@ static __u32	frame_buffer_size = 0;
 static __u32	frame_buffer_start = 0;	/* physical start address */
 #endif
 
+#ifdef CONFIG_FRAMEBUF_SELF_ADAPT_HACK
+#define BL_BUF_BLOCK 1048576
+static bool frame_buffer_boosted = false;
+#endif
+
 /* cust size self adapter */
 static __u32	cust_buffer_size = 0;
 static __u32	cust_buffer_start = 0;	/* physical start address */
@@ -92,8 +97,15 @@ __tagtable(ATAG_CHARGE_FLAG, parse_tag_charge_flag);
 #define ATAG_FRAME_BUFFER_ID 0x4d534D79
 int __init parse_tag_frame_buffer(const struct tag *tags)
 {
-	frame_buffer_size = tags->u.mem.size;
-	frame_buffer_start = tags->u.mem.start;
+    frame_buffer_size = tags->u.mem.size;
+#ifdef CONFIG_FRAMEBUF_SELF_ADAPT_HACK
+    if(frame_buffer_size < 6 * BL_BUF_BLOCK)
+    {
+        frame_buffer_size += BL_BUF_BLOCK;
+        frame_buffer_boosted = true;
+    }
+#endif
+    frame_buffer_start = tags->u.mem.start;
 	
     printk(KERN_DEBUG "%s: fb addr= 0x%x, size=0x%0x\n", __func__, frame_buffer_start, frame_buffer_size);
     return 0;
@@ -125,9 +137,13 @@ void get_frame_buffer_mem_region(__u32 *start_addr, __u32 *size)
 #define ATAG_CUST_BUFFER_ID 0x4d534D7B
 int __init parse_tag_cust_buffer(const struct tag * tags)
 {
-	cust_buffer_size = tags->u.mem.size;
-	cust_buffer_start = tags->u.mem.start;
-	
+    cust_buffer_size = tags->u.mem.size;
+    cust_buffer_start = tags->u.mem.start;
+#ifdef CONFIG_FRAMEBUF_SELF_ADAPT_HACK
+    if(frame_buffer_boosted)
+        cust_buffer_start += BL_BUF_BLOCK;
+#endif
+
     printk(KERN_DEBUG "%s: cust addr= 0x%x, size=0x%0x\n", __func__, cust_buffer_start, cust_buffer_size);
     return 0;
 }
@@ -229,6 +245,24 @@ char *get_bt_device_name(void)
 	
 	return bt_device_array[i].dev_name;
 } 
+
+char *get_framebuffer_boosted(void)
+{
+  char *framebuffer_boosted = NULL;
+#ifdef CONFIG_FRAMEBUF_SELF_ADAPT_HACK
+  if(frame_buffer_boosted)
+  {
+    framebuffer_boosted = "1";
+  }
+  else
+  {
+#endif
+    framebuffer_boosted = "0";
+#ifdef CONFIG_FRAMEBUF_SELF_ADAPT_HACK
+  }
+#endif
+  return framebuffer_boosted;
+}
 
 /* modify spk mic function name */
 /* Add DTS property */

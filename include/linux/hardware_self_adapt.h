@@ -395,6 +395,7 @@ int board_support_ofn(bool * ofn_support);
 char *get_compass_gs_position_name(void);
 char *get_sensors_list_name(void);
 char *get_wifi_device_name(void);
+char *get_framebuffer_boosted(void);
 hw_bt_device_model get_hw_bt_device_model(void);
 char *get_bt_device_name(void);
 lcd_panel_type get_lcd_panel_type(void);
