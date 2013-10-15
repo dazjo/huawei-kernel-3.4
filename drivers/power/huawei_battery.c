@@ -632,6 +632,7 @@ static int msm_batt_get_volt_ret_func(struct msm_rpc_client *batt_client,
 
 	return 0;
 }
+#ifndef CONFIG_HUAWEI_NO_BATT_ID_RPC
 #ifdef CONFIG_HUAWEI_KERNEL
 struct msm_batt_get_batt_id_data {
 	u32 batt_id ;
@@ -645,6 +646,7 @@ static int msm_batt_get_batt_id_func(struct msm_rpc_client *batt_client,
 	data_ptr->batt_id = be32_to_cpu(buf_ptr->batt_id);
 	return 0;
 }
+#endif
 #endif
 static u32 msm_batt_get_vbatt_voltage(void)
 {
@@ -665,6 +667,7 @@ static u32 msm_batt_get_vbatt_voltage(void)
 
 	return rep.battery_voltage;
 }
+#ifndef CONFIG_HUAWEI_NO_BATT_ID_RPC
 /*function is get battery limit voltage */
 #ifdef CONFIG_HUAWEI_KERNEL
 static u32 msm_batt_get_batt_id(void)
@@ -685,6 +688,7 @@ static u32 msm_batt_get_batt_id(void)
 	printk("batt_id_lim_volt = %d\n",rep.batt_id);
 	return rep.batt_id;
 }
+#endif
 #endif
 /* the RPC function to get the charge state from modem side */
 struct msm_batt_get_charge_state_ret_data {
@@ -779,6 +783,7 @@ static void msm_batt_update_psy_status(void)
 	struct	power_supply	*supp;
 
     u32	battery_capacity;
+#ifndef CONFIG_HUAWEI_NO_BATT_ID_RPC
     u32 battery_max_voltage = 0;
 	if(CHG_LIMIT_VOLT==msm_batt_get_batt_id())
 	{
@@ -790,6 +795,7 @@ static void msm_batt_update_psy_status(void)
 		battery_max_voltage = HEALTH_VOLT_MAX ;
 		msm_batt_info.voltage_max_design = BATTERY_HIGH;
 	}
+#endif
 	if (msm_batt_get_batt_chg_status())
 		return;
 
@@ -1009,7 +1015,11 @@ static void msm_batt_update_psy_status(void)
     {
         msm_batt_info.batt_health = POWER_SUPPLY_HEALTH_COLD;        
     }
-	else if(battery_voltage > battery_max_voltage)
+#ifndef CONFIG_HUAWEI_NO_BATT_ID_RPC
+    else if(battery_voltage > battery_max_voltage)
+#else
+    else if(battery_voltage > HEALTH_VOLT_MAX)
+#endif
     {
         msm_batt_info.batt_health = POWER_SUPPLY_HEALTH_OVERVOLTAGE; 
     }
@@ -1695,6 +1705,7 @@ static int msm_batt_set_chg_limit_current(u32 chg_limit_curent)
 	return 0;
 }
 #endif
+#ifndef CONFIG_HUAWEI_NO_BATT_ID_RPC
 /* rpc data struct for battery manufacturer id */
 struct msm_batt_resistance_id_data {
 	u32 resistance_id;
@@ -1732,13 +1743,16 @@ static u32 msm_batt_manufacturer_id(void)
 
 	return rep.resistance_id;
 }
+#endif
 
 /* return -1 means the battery no manufacturer id info*/
 #define BATTERY_RESISTANCE_MV_DEFAULT 0xFF
 hw_battery_id_mv get_battery_resistance_id(void)
 {
     hw_battery_id_mv batt_id = -1;
+#ifndef CONFIG_HUAWEI_NO_BATT_ID_RPC
     batt_id = (hw_battery_id_mv)msm_batt_manufacturer_id();
+#endif
     return batt_id;
 }
 static int msm_batt_cleanup(void)

@@ -445,3 +445,9 @@ config HUAWEI_EVALUATE_POWER_CONSUMPTION
 	tristate "huawei_evaluate_power_consumption"
 	help
 	  Say Y here if you want to support huawei evaluate power consumption.
+
+config HUAWEI_NO_BATT_ID_RPC
+	bool "Disable BATT_ID and RESISTANCE_ID RPC"
+	help
+	  Say Y here to disable BATT_ID and RESISTANCE_ID RPC on targets that
+	  don't support it.
