@@ -31,11 +31,18 @@
 #define PM_GPIO26_PWM_ID  2
 #define ADD_VALUE			4
 #define PWM_LEVEL_ADJUST	226
-/*modify the min value*/
+#ifdef CONFIG_HUAWEI_OLD_BACKLIGHT
+#define BL_MIN_LEVEL 30
+#else
 #define BL_MIN_LEVEL 13
+#endif
 
 
-/* delete 2 lines about PWM_LEVEL_ADJUST_LPG and BL_MIN_LEVEL_LPG */
+#ifdef CONFIG_HUAWEI_OLD_BACKLIGHT
+/*LPG CTL MACRO  range 0 to 100*/
+#define PWM_LEVEL_ADJUST_LPG	100
+#define BL_MIN_LEVEL_LPG 	    10
+#endif
 /* move semaphore to msm_fb.c */
 static struct msm_fb_data_type *mfd_local;
 static boolean backlight_set = FALSE;
@@ -100,10 +107,18 @@ void msm_backlight_set(int level)
 #ifdef CONFIG_ARCH_MSM7X27A
 	if(level)
 	{
+#ifdef CONFIG_HUAWEI_OLD_BACKLIGHT
+		level = ((level * PWM_LEVEL_ADJUST_LPG) / PWM_LEVEL );
+		if (level < BL_MIN_LEVEL_LPG)
+		{
+			level = BL_MIN_LEVEL_LPG;
+		}
+#else
 		if (level < BL_MIN_LEVEL)        
 		{    
 			level = BL_MIN_LEVEL;      
 		}
+#endif
 	}
     if (last_level == level)
     {
@@ -195,7 +210,9 @@ void cabc_backlight_set(struct msm_fb_data_type * mfd)
 
 void pwm_set_backlight(struct msm_fb_data_type *mfd)
 {
-	/*< Delete unused variable */
+#ifdef CONFIG_HUAWEI_OLD_BACKLIGHT
+	lcd_panel_type lcd_panel_wvga = LCD_NONE;
+#endif
 	/*When all the device are resume that can turn the light*/
 	if(atomic_read(&suspend_flag)) 
 	{
@@ -203,7 +220,17 @@ void pwm_set_backlight(struct msm_fb_data_type *mfd)
 		backlight_set = TRUE;
 		return;
 	}
-	/*< Delete some lines,control backlight in hardware lights.c by property */
+#ifdef CONFIG_HUAWEI_OLD_BACKLIGHT
+	lcd_panel_wvga = get_lcd_panel_type();
+	if ((MIPI_CMD_RSP61408_CHIMEI_WVGA == lcd_panel_wvga )
+		|| (MIPI_CMD_RSP61408_BYD_WVGA == lcd_panel_wvga )
+		|| (MIPI_CMD_RSP61408_TRULY_WVGA == lcd_panel_wvga )
+		|| (MIPI_CMD_HX8369A_TIANMA_WVGA == lcd_panel_wvga ))
+	{
+		/* keep duty is 75% of the quondam duty */
+		mfd->bl_level = mfd->bl_level * 75 / 100;
+	}
+#endif
 	if (get_hw_lcd_ctrl_bl_type() == CTRL_BL_BY_MSM)
 	{
 		msm_backlight_set(mfd->bl_level);

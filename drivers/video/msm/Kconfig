@@ -1089,4 +1089,8 @@ config FB_AUTO_CABC
 	depends on FB_MSM
 	default n
 
+config HUAWEI_OLD_BACKLIGHT
+	bool "Support older Huawei backlights"
+	default n
+
 endif
