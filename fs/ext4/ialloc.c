@@ -1097,10 +1097,10 @@ int ext4_init_inode_table(struct super_block *sb, ext4_group_t group,
 	 * used inodes so we need to skip blocks with used inodes in
 	 * inode table.
 	 */
-/*  yanzhijun for remount system */
 	if (!(gdp->bg_flags & cpu_to_le16(EXT4_BG_INODE_UNINIT)))
-		used_blks = (EXT4_INODES_PER_GROUP(sb) -
-			    ext4_itable_unused_count(sb, gdp))/sbi->s_inodes_per_block;
+		used_blks = DIV_ROUND_UP((EXT4_INODES_PER_GROUP(sb) -
+			    ext4_itable_unused_count(sb, gdp)),
+			    sbi->s_inodes_per_block);
 
 	if ((used_blks < 0) || (used_blks > sbi->s_itb_per_group)) {
 		ext4_error(sb, "Something is wrong with group %u: "
