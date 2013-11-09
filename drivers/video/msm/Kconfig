@@ -1093,4 +1093,8 @@ config HUAWEI_OLD_BACKLIGHT
 	bool "Support older Huawei backlights"
 	default n
 
+config FB_MSM_ALIGN_BUFFER
+	bool "Enable a buffer alignment hack (for recovery)."
+	default n
+
 endif
