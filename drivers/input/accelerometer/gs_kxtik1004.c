@@ -66,9 +66,9 @@ static int kxtik_debug_mask ;
 module_param_named(kxtik_debug, kxtik_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define kxtik_DBG(x...) do {\
-    if (kxtik_debug_mask) \
-        printk(KERN_DEBUG x);\
-    } while (0)
+	if (kxtik_debug_mask) \
+		printk(KERN_DEBUG x);\
+	} while (0)
 	
 #define GS_POLLING   1
 
@@ -76,10 +76,10 @@ static struct workqueue_struct *gs_wq;
 extern struct input_dev *sensor_dev;
 
 struct gs_data {
-    uint16_t addr; 
+	uint16_t addr; 
 	struct i2c_client *client;
 	struct input_dev *input_dev;
-    int use_irq;
+	int use_irq;
 	int sub_type;
 	struct mutex  mlock;
 	struct hrtimer timer;
@@ -92,6 +92,7 @@ struct gs_data {
 static struct gs_data  *this_gs_data;
 static int accel_delay = GS_KX_TIMRER;     /*1s*/
 static atomic_t a_flag;
+static atomic_t kxtik_status_flag;
 static compass_gs_position_type  compass_gs_position=COMPASS_TOP_GS_TOP;
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
@@ -101,27 +102,27 @@ static void gs_late_resume(struct early_suspend *h);
 
 static inline int reg_read(struct gs_data *gs , int reg)
 {
-    int val;
-    mutex_lock(&gs->mlock);
-    val = i2c_smbus_read_byte_data(gs->client, reg);
-    if (val < 0)
-    {
-        printk(KERN_ERR "kxtik chip i2c %s failed! reg=0x%x, value=0x%x\n", __FUNCTION__, reg, val);
-    }
-    mutex_unlock(&gs->mlock);
-    return val;
+	int val;
+	mutex_lock(&gs->mlock);
+	val = i2c_smbus_read_byte_data(gs->client, reg);
+	if (val < 0)
+	{
+		printk(KERN_ERR "kxtik chip i2c %s failed! reg=0x%x, value=0x%x\n", __FUNCTION__, reg, val);
+	}
+	mutex_unlock(&gs->mlock);
+	return val;
 }
 
 static inline int reg_write(struct gs_data *gs, int reg, uint8_t val)
 {
-    int ret;
-    mutex_lock(&gs->mlock);
-    ret = i2c_smbus_write_byte_data(gs->client, reg, val);
-    if(ret < 0)
-    {
-        printk(KERN_ERR "kxtik chip i2c %s failed! reg=0x%x, value=0x%x, ret=%d\n", __FUNCTION__, reg, val, ret);
-    }
-    mutex_unlock(&gs->mlock);
+	int ret;
+	mutex_lock(&gs->mlock);
+	ret = i2c_smbus_write_byte_data(gs->client, reg, val);
+	if(ret < 0)
+	{
+		printk(KERN_ERR "kxtik chip i2c %s failed! reg=0x%x, value=0x%x, ret=%d\n", __FUNCTION__, reg, val, ret);
+	}
+	mutex_unlock(&gs->mlock);
 
     return ret;
 }
@@ -179,6 +180,7 @@ static int gs_init_reg(struct gs_data  *gs)
 static int gs_kxtik_open(struct inode *inode, struct file *file)
 {	
 	gs_init_reg(this_gs_data);
+	atomic_set(&kxtik_status_flag, GS_RESUME);
 	if (this_gs_data->use_irq)
 		enable_irq(this_gs_data->client->irq);
 	else
@@ -190,6 +192,7 @@ static int gs_kxtik_release(struct inode *inode, struct file *file)
 {
 	int ret;
 	ret  = reg_write(this_gs_data, CTRL_REG1, 0x00);
+	atomic_set(&kxtik_status_flag, GS_SUSPEND);
 	if (this_gs_data->use_irq)
 		disable_irq(this_gs_data->client->irq);
 	else
@@ -200,7 +203,7 @@ static int gs_kxtik_release(struct inode *inode, struct file *file)
 
 static long
 gs_kxtik_ioctl(struct file *file, unsigned int cmd,
-	   unsigned long arg)
+		unsigned long arg)
 {
 	/*
 	struct kxtik_data *tik = file->private_data;
@@ -226,7 +229,6 @@ gs_kxtik_ioctl(struct file *file, unsigned int cmd,
 	switch (cmd) 
 	{
 		case ECS_IOCTL_APP_SET_AFLAG:
-			printk("%s: flag = %x\n",__FUNCTION__,flag);
 			atomic_set(&a_flag, flag);
 			break;
 		case ECS_IOCTL_APP_GET_AFLAG:  /*get open acceleration sensor flag*/
@@ -349,23 +351,21 @@ static void gs_work_func(struct work_struct *work)
     }
     else
     {
-        /* hrtimer_start fail */
-        if (0 != hrtimer_start(&gs->timer, ktime_set(sesc, nsesc), HRTIMER_MODE_REL) )
-        {
-            printk(KERN_ERR "%s, line %d: hrtimer_start fail! sec=%d, nsec=%d\n", __func__, __LINE__, sesc, nsesc);
-        }
+        if(GS_RESUME == atomic_read(&kxtik_status_flag))
+            if (0 != hrtimer_start(&gs->timer, ktime_set(sesc, nsesc), HRTIMER_MODE_REL) )
+                printk(KERN_ERR "%s, line %d: hrtimer_start fail! sec=%d, nsec=%d\n", __func__, __LINE__, sesc, nsesc);
     }
 }
 
 
 static enum hrtimer_restart gs_timer_func(struct hrtimer *timer)
 {
-	struct gs_data *gs = container_of(timer, struct gs_data, timer);		
+	struct gs_data *gs = container_of(timer, struct gs_data, timer);
 	queue_work(gs_wq, &gs->work);
 	return HRTIMER_NORESTART;
 }
 
-#ifndef   GS_POLLING 	
+#ifndef   GS_POLLING 
 static irqreturn_t gs_irq_handler(int irq, void *dev_id)
 {
 	struct gs_data *gs = dev_id;
@@ -403,7 +403,6 @@ static int gs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	int ret = 0;
 	struct gs_data *gs;
 	struct gs_platform_data *pdata = NULL;
-	printk("my gs_kxtik\n");
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		printk(KERN_ERR "gs_probe: need I2C_FUNC_I2C\n");
 		ret = -ENODEV;
@@ -419,18 +418,7 @@ static int gs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			}
 		}
 #endif
-		if(pdata->adapt_fn != NULL){
-			ret = pdata->adapt_fn();
-			if(ret > 0){
-				client->addr = pdata->slave_addr;//actual address
-				printk(KERN_INFO "%s:change i2c addr to actrual address = %d\n", __FUNCTION__, pdata->slave_addr);
-				if(client->addr == 0){
-					printk(KERN_ERR "%s: bad i2c address = %d\n", __FUNCTION__, client->addr);
-					ret = -EFAULT;
-					goto err_power_failed;
-				}
-			}
-		}
+		/*adapt_fn is out of style,delete*/
 		if(pdata->get_compass_gs_position != NULL){
 			compass_gs_position=pdata->get_compass_gs_position();
 		}
@@ -459,21 +447,14 @@ static int gs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	gs->client = client;
 	i2c_set_clientdata(client, gs);
 	gs->sub_type = reg_read(gs,WHO_AM_I);
-	printk("deviceid = %d\n",gs->sub_type);
-	if(0x05 == gs->sub_type)
-	{
-		printk("G-sensor is kxtik\n");
-	}
-	else
-	{
-		printk("kxtik probe failed,it's other G-sensor\n");
+	if(0x05 != gs->sub_type)
 		goto err_detect_failed;
-	}
 	ret  = reg_write(gs, CTRL_REG1, 0x50);
 	if(ret <0)
 	{
 		printk("ret is %d\n",ret);
 	}
+	atomic_set(&kxtik_status_flag, GS_SUSPEND);
 	#ifdef CONFIG_HUAWEI_HW_DEV_DCT
 	/* detect current device successful, set the flag as present */
 	set_hw_dev_flag(DEV_I2C_G_SENSOR);
@@ -540,38 +521,38 @@ static int gs_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	register_early_suspend(&gs->early_suspend);
 #endif
 
-    gs_wq = create_singlethread_workqueue("gs_wq");
-    if (!gs_wq)
-    {
-        ret = -ENOMEM;
-        printk(KERN_ERR "%s, line %d: create_singlethread_workqueue fail!\n", __func__, __LINE__);
-        goto err_create_workqueue_failed;
-    }
-    this_gs_data =gs;
-    if(pdata && pdata->init_flag)
-        *(pdata->init_flag) = 1;
-    ret = set_sensor_input(ACC, gs->input_dev->dev.kobj.name);
-    if (ret) {
-        dev_err(&client->dev, "%s set_sensor_input failed\n", __func__);
-        goto err_create_workqueue_failed;
-    }
-    printk(KERN_INFO "gs_probe: Start KXTIK  in %s mode\n", gs->use_irq ? "interrupt" : "polling");
-    set_sensors_list(G_SENSOR);
-    return 0;
+	gs_wq = create_singlethread_workqueue("gs_wq");
+	if (!gs_wq)
+	{
+		ret = -ENOMEM;
+		printk(KERN_ERR "%s, line %d: create_singlethread_workqueue fail!\n", __func__, __LINE__);
+		goto err_create_workqueue_failed;
+	}
+	this_gs_data =gs;
+	if(pdata && pdata->init_flag)
+		*(pdata->init_flag) = 1;
+	ret = set_sensor_input(ACC, gs->input_dev->dev.kobj.name);
+	if (ret) {
+		dev_err(&client->dev, "%s set_sensor_input failed\n", __func__);
+		goto err_create_workqueue_failed;
+	}
+	printk("My G-sensor is KXTIK\n");
+	set_sensors_list(G_SENSOR);
+	return 0;
 
 err_create_workqueue_failed:
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&gs->early_suspend);
+	unregister_early_suspend(&gs->early_suspend);
 #endif
 
-    if (gs->use_irq)
-    {
-        free_irq(client->irq, gs);
-    }
-    else
-    {
-        hrtimer_cancel(&gs->timer);
-    }
+	if (gs->use_irq)
+	{
+		free_irq(client->irq, gs);
+	}
+	else
+	{
+		hrtimer_cancel(&gs->timer);
+	}
 err_misc_device_register_failed:
 		misc_deregister(&gsensor_device);
 err_input_register_device_failed:
@@ -583,13 +564,7 @@ err_alloc_data_failed:
 #ifndef   GS_POLLING 
 	gs_free_int();
 #endif
-/*turn down the power*/	
 err_power_failed:
-#ifdef CONFIG_ARCH_MSM7X30
-	if(pdata->gs_power != NULL){
-		pdata->gs_power(IC_PM_OFF);
-	}
-#endif
 err_check_functionality_failed:
 	return ret;
 }
@@ -598,7 +573,7 @@ static int gs_remove(struct i2c_client *client)
 {
 	struct gs_data *gs = i2c_get_clientdata(client);
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&gs->early_suspend);
+	unregister_early_suspend(&gs->early_suspend);
 #endif
 	if (gs->use_irq)
 		free_irq(client->irq, gs);
@@ -620,6 +595,7 @@ static int gs_suspend(struct i2c_client *client, pm_message_t mesg)
 		printk("register write failed \n ");
 		return ret;
 	}
+	atomic_set(&kxtik_status_flag, GS_SUSPEND);
 	if (gs->use_irq)
 		disable_irq(client->irq);
 	else
@@ -639,6 +615,7 @@ static int gs_resume(struct i2c_client *client)
 {
 	struct gs_data *gs = i2c_get_clientdata(client);
 	gs_init_reg(gs);
+	atomic_set(&kxtik_status_flag, GS_RESUME);
 	if (!gs->use_irq)
 		hrtimer_start(&gs->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
 	else

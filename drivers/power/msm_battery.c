@@ -457,6 +457,8 @@ static void msm_batt_update_psy_status(void)
 	u32	battery_temp;
 	struct	power_supply	*supp;
 
+	pr_info("%s: enter\n", __func__);
+
 	if (msm_batt_get_batt_chg_status())
 		return;
 
@@ -483,15 +485,14 @@ static void msm_batt_update_psy_status(void)
 		 * Nothing changed in Battery or charger status.
 		 */
 		unnecessary_event_count++;
-		if ((unnecessary_event_count % 20) == 1)
-			DBG_LIMIT("BATT: same event count = %u\n",
-			 unnecessary_event_count);
+		pr_info("BATT: same event count = %u\n",
+			unnecessary_event_count);
 		return;
 	}
 
 	unnecessary_event_count = 0;
 
-	DBG_LIMIT("BATT: rcvd: %d, %d, %d, %d; %d, %d\n",
+	pr_info("BATT: rcvd: %d, %d, %d, %d; %d, %d\n",
 		 charger_status, charger_type, battery_status,
 		 battery_level, battery_voltage, battery_temp);
 
@@ -635,6 +636,20 @@ static void msm_batt_update_psy_status(void)
 	msm_batt_info.battery_temp 	= battery_temp;
 
 	if (msm_batt_info.battery_voltage != battery_voltage) {
+
+		/* Android doesn't initiate shutdown even if voltage is less
+		 * than minimum batt level if USB is connected. Hence report
+		 * fake USB disconnection, in such scenario. Do this only when
+		 * the charger is present but battery is discharging faster.
+		 */
+		if (battery_voltage <= msm_batt_info.voltage_min_design &&
+			battery_voltage < msm_batt_info.battery_voltage &&
+			msm_batt_info.charger_status == CHARGER_STATUS_GOOD) {
+			pr_err("BATT: send fake USB unplug, start shutdown\n");
+			msm_batt_info.current_chg_source = 0;
+			supp = &msm_psy_batt;
+		}
+
 		msm_batt_info.battery_voltage  	= battery_voltage;
 		msm_batt_info.batt_capacity =
 			msm_batt_info.calculate_capacity(battery_voltage);
@@ -650,6 +665,8 @@ static void msm_batt_update_psy_status(void)
 		DBG_LIMIT("BATT: Supply = %s\n", supp->name);
 		power_supply_changed(supp);
 	}
+
+	pr_info("%s: exit\n", __func__);
 }
 
 #ifdef CONFIG_HAS_EARLYSUSPEND

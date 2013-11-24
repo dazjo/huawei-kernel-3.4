@@ -639,10 +639,20 @@ static int __devinit mipi_otm8018b_lcd_probe(struct platform_device *pdev)
 }
 	/*delete some lines */
 
+static struct sequence otm8018b_wvga_set_dimming_off_table[] =
+{
+	{0x00053,MIPI_DCS_COMMAND,0},
+	{0x00024,TYPE_PARAMETER,0},
+	{0xFFFFF,MIPI_TYPE_END,0}, /* the end flag,it don't sent to driver IC */
+};
 void otm8018b_set_cabc_backlight(struct msm_fb_data_type *mfd,uint32 bl_level)
 {	
 	otm8018b_cabc_enable_table[1].reg = bl_level; // 1 will be changed if modify init code
-
+    if(0 == bl_level)
+    {
+        process_mipi_table(mfd,&otm8018b_tx_buf,(struct sequence*)&otm8018b_wvga_set_dimming_off_table,
+                ARRAY_SIZE(otm8018b_wvga_set_dimming_off_table), lcd_panel_wvga);
+    }
 	process_mipi_table(mfd,&otm8018b_tx_buf,(struct sequence*)&otm8018b_cabc_enable_table,
 		 ARRAY_SIZE(otm8018b_cabc_enable_table), lcd_panel_wvga);
 }

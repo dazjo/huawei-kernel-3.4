@@ -58,6 +58,48 @@ enum msm_cam_flash_stat{
 	MSM_CAM_FLASH_ON,
 };
 
+typedef struct msm_flash_probed_tag
+{
+	int (* set_led_state)(unsigned led_state);
+}msm_flash_probed;
+
+static msm_flash_probed flash_probed_succeed = {
+	.set_led_state = NULL
+	};
+
+
+/* Register interface: use for registering the setting led's state function. */
+/* Usage: Need to be added to the probe function when probe succeed. */
+void register_led_set_state( int (* func)(unsigned led_state) )
+{
+	flash_probed_succeed.set_led_state = func;
+	if (func)
+	{
+		CDBG("%s : Register succeed.\n", __func__);
+	}
+	else
+	{
+		printk("%s : Register func is NULL.\n", __func__);
+	}
+}
+
+/*Call Interface: Set led's state interface for all type of leds. */
+int call_led_set_state(unsigned led_state)
+{
+	int ret =0;
+	
+	if  ( NULL != flash_probed_succeed.set_led_state )
+	{
+		ret = flash_probed_succeed.set_led_state(led_state);
+		CDBG("%s : LED state is %d.\n", __func__, led_state);
+	}
+	else
+	{
+		printk("%s : All LED flash probed failed or didn't register led_set_state after probe.\n", __func__);
+	}
+
+	return ret;
+}
 static struct i2c_client *sc628a_client;
 
 static int32_t flash_i2c_txdata(struct i2c_client *client,
@@ -849,7 +891,7 @@ int msm_flash_ctrl(struct msm_camera_sensor_info *sdata,
 	sensor_data = sdata;
 	switch (flash_info->flashtype) {
 	case LED_FLASH:
-		rc = tps61310_set_flash(flash_info->ctrl_data.led_state);
+		rc = call_led_set_state(flash_info->ctrl_data.led_state);
 			break;
 	case STROBE_FLASH:
 		rc = msm_strobe_flash_ctrl(sdata->strobe_flash_data,

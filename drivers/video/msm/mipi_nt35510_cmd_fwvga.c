@@ -61,7 +61,7 @@ static uint32 mipi_nt35510_read_register(struct msm_fb_data_type *mfd)
 	cmd = &nt35510_register_id_cmd;
 	mipi_dsi_cmds_rx(mfd, tp, rp, cmd, 1);
 	lp = (char *)rp->data;	
-	pr_info("%s: register_id=%02x\n", __func__, *lp);
+	/* Delete unwanted log */
 	
 	return *lp;
 }
@@ -846,6 +846,7 @@ Return:
 static int nt35510_fwvga_config_auto_cabc(struct msmfb_cabc_config cabc_cfg,struct msm_fb_data_type *mfd)
 {
 	int ret = 0;
+	uint32 read_ret = 0;
 
 	switch(cabc_cfg.mode)
 	{
@@ -867,11 +868,14 @@ static int nt35510_fwvga_config_auto_cabc(struct msmfb_cabc_config cabc_cfg,stru
 	}
 	if(likely(0 == ret))
 	{
+		/* clean up ack_err_status */
+		read_ret = mipi_nt35510_read_register(mfd);
+
 		process_mipi_table(mfd,&nt35510_fwvga_tx_buf,(struct sequence*)&nt35510_fwvga_auto_cabc_set_table,
 			 ARRAY_SIZE(nt35510_fwvga_auto_cabc_set_table), lcd_panel_fwvga);
 	}
 
-	LCD_DEBUG("%s: change cabc mode to %d\n",__func__,cabc_cfg.mode);
+	LCD_DEBUG("%s: 0Ah == 0x%02x, change cabc mode to %d\n",__func__, read_ret, cabc_cfg.mode);
 	return ret;
 }
 #endif // CONFIG_FB_AUTO_CABC

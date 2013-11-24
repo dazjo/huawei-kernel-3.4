@@ -265,6 +265,7 @@ static int tps61310_probe(struct i2c_client *client,
 	tempvalue = tps61310_i2c_read(tps61310_client, 0x07);
 	if ((tempvalue & 0x07) == 0x06) {
 		printk("tps61310 read chip id ok!\n");
+		register_led_set_state(tps61310_set_flash);
 	} else {
 		printk("tps61310 read chip id error!\n");
 		return -ENODEV;

@@ -81,8 +81,7 @@ struct aps_init_regdata{
 };
 static struct aps_data  *this_aps_data;
 
-static int p_h = 0x3c0;
-static int p_l = 0x3bf;
+//delete p_h and p_l
 struct input_dev *sensor_9900_dev=NULL;
 static int aps_9900_delay = 1000;     /*1s*/
 /* delete this part */
@@ -101,10 +100,14 @@ static atomic_t p_flag;
 /* to be same with ICS, move the values up */
 static int proximity_data_value = 0;
 static int light_data_value = 0;
-
+static int irdata = 0;/* ch1 data  */
+static int sunlight = 30000;/*75% of maximux from FAE*/
 /*init the value of reg 0*/
 static u8  reg0_value = 0x38; 
 
+#define CMD_CLR_PS_INT		0xE5
+#define CMD_CLR_ALS_INT		0xE6
+#define CMD_CLR_PS_ALS_INT	0xE7
 static char light_device_id[] = "AVAGO-TAOS-9900";
 
 /* an arithmometer to mark how much times the aps device opened*/
@@ -216,22 +219,11 @@ static int aps_9900_open(struct inode *inode, struct file *file)
     }
     open_count ++;
     APS9900_DBG(KERN_ERR "%s:flag is %d,open_count = %d\n", __func__,aps_open_flag,open_count);
-    if(p_h != get_9900_register(this_aps_data, APDS9900_PIHTL_REG, 1) \
-     ||p_l != get_9900_register(this_aps_data, APDS9900_PILTL_REG, 1) )
-    {
-        ret  = set_9900_register(this_aps_data, APDS9900_PILTL_REG, p_l, 1);
-        ret |= set_9900_register(this_aps_data, APDS9900_PIHTL_REG, p_h, 1);
-        if (ret)
-        {
-            printk(KERN_ERR "%s:set_9900_register is error(%d)!", __func__, ret);
-        }
-        printk("%s:reset PH and PL\n!",__func__);
-    }
+    //delete this function,because it cause a low probability problem
     if (!aps_open_flag)
     {
         u8 value_reg0;
-        int ret;
-        
+        //delete useless variable
         /*set bit 0 of reg 0 ==1*/
         value_reg0 = reg0_value;
         /* if power on ,will not set PON=1 again */
@@ -262,17 +254,7 @@ static int aps_9900_release(struct inode *inode, struct file *file)
     int ret;
     aps_open_flag--;
     aps_9900_delay = 1000;//1s
-    if(p_h != get_9900_register(this_aps_data, APDS9900_PIHTL_REG, 1) \
-     ||p_l != get_9900_register(this_aps_data, APDS9900_PILTL_REG, 1) )
-    {
-        ret  = set_9900_register(this_aps_data, APDS9900_PILTL_REG, p_l, 1);
-        ret |= set_9900_register(this_aps_data, APDS9900_PIHTL_REG, p_h, 1);
-        if (ret)
-        {
-            printk(KERN_ERR "%s:set_9900_register is error(%d)!", __func__, ret);
-        }
-        printk("%s:reset PH and PL\n!",__func__);
-    }
+    //delete this function,because it cause a low probability problem
     /*when proximity is released then unlock it*/
     if( proximity_device_minor == iminor(inode) ){
         PROXIMITY_DEBUG("%s: proximity_device_minor == iminor(inode)\n", __func__);
@@ -283,8 +265,8 @@ static int aps_9900_release(struct inode *inode, struct file *file)
     }
     if (!aps_open_flag)
     {
-        int value_reg0,ret;
-        
+        //delete useless variable
+        int value_reg0;
         /*set bit 0 of reg 0 ==0*/
         value_reg0 = reg0_value & APDS9900_REG0_POWER_OFF;
         ret = set_9900_register(this_aps_data, APDS9900_ENABLE_REG, value_reg0, 0);
@@ -519,7 +501,7 @@ static void aps_9900_work_func(struct work_struct *work)
     int pdata = 0;/* proximity data*/
     /* change irdate to static, cdate to dynamic */
     int cdata = 0;/* ch0 data  */
-    int irdata = 0;/* ch1 data  */
+    /*make irdata static*/
     int cdata_high = 0, cdata_low = 0;
     int lux; 
     int status;
@@ -563,7 +545,7 @@ static void aps_9900_work_func(struct work_struct *work)
         /* add some logs */
         APS9900_DBG("%s:pdata=%d pthreshold_h=%d pthreshold_l=%d\n", __func__, pdata, pthreshold_h, pthreshold_l);
         /* clear proximity interrupt bit */
-        ret = set_9900_register(aps, 0x65, 0, 0);
+        ret = i2c_smbus_write_byte(aps->client,CMD_CLR_PS_INT);
         if (ret)
         {
             printk(KERN_ERR "%s, line %d: set_9900_register is error(%d),clear failed!", __func__, __LINE__, ret);
@@ -572,10 +554,28 @@ static void aps_9900_work_func(struct work_struct *work)
          proximity_data_value = pdata;
 
         /* if more than the value of  proximity high threshold we set*/
-
         if (pdata >= pthreshold_h) 
-		{
+        {
+            /*move sunlight avoid to this part */
+            APS9900_DBG("pdata = %d,irdata = %d\n",pdata,irdata);
+            if(atomic_read(&l_flag))
+            {
+                if (( irdata > sunlight ))
+                {
+                    ret = i2c_smbus_write_byte(aps->client,CMD_CLR_PS_INT);
+                    if (ret)
+                    {
+                        printk(KERN_ERR "set_9900_register is error(%d),clear failed!\n",ret);
+                    }
+                    else
+                    {
+                        printk("the sunlight is so strong that the proximity is influence, we filtrate it");
+                    }
+                    goto Light_init;
+                }
+            }
             ret = set_9900_register(aps, APDS9900_PILTL_REG, min_proximity_value, 1);
+            ret |= set_9900_register(aps, APDS9900_PIHTL_REG, (MAX_ADC_PROX_VALUE + 1), 1);
             if (ret)
             {
                 printk(KERN_ERR "%s, line %d: set APDS9900_PILTL_REG register is error(min=%d, ret=%d)!", __func__, __LINE__, min_proximity_value, ret);
@@ -587,7 +587,9 @@ static void aps_9900_work_func(struct work_struct *work)
         /* the condition of pdata==pthreshold_l is valid */
         else if (pdata <=  pthreshold_l)
         {
-            ret = set_9900_register(aps, APDS9900_PILTL_REG, 0, 1);
+            ret = set_9900_register(aps, APDS9900_PIHTL_REG, (min_proximity_value + apds_9900_pwindows_value), 1);
+            /*Warning,this scheme is not tested by batch production*/
+            //ret = set_9900_register(aps, APDS9900_PILTL_REG, 0, 1);
             if (ret)
             {
                 printk(KERN_ERR "%s, line %d: set APDS9900_PILTL_REGs register is error(%d)!", __func__, __LINE__, ret);
@@ -607,9 +609,8 @@ static void aps_9900_work_func(struct work_struct *work)
         }
         pthreshold_h = get_9900_register(aps, APDS9900_PIHTL_REG, 1);
         pthreshold_l = get_9900_register(aps, APDS9900_PILTL_REG, 1);
-        p_h = pthreshold_h;
-        p_l = pthreshold_l;
-        APS9900_DBG("%s:min = %d,apds_9900 = %d\n",__func__,min_proximity_value,apds_9900_pwindows_value);
+        //delete p_h and p_l
+        APS9900_DBG("%s:min = %d,prox_window = %d\n",__func__,min_proximity_value,apds_9900_pwindows_value);
         APS9900_DBG("%s:after reset the pdata=%d pthreshold_h=%d pthreshold_l=%d\n", __func__, pdata, pthreshold_h, pthreshold_l);
     }
     /* p_flag is close, and no proximity interrupt: normal, just add for debug */ 
@@ -647,7 +648,7 @@ static void aps_9900_work_func(struct work_struct *work)
     else if ( !atomic_read(&p_flag) && (status & APDS9900_STATUS_PROXIMITY_BIT) )
     {
         /* clear proximity interrupt bit */
-        ret = set_9900_register(aps, 0x65, 0, 0);
+        ret = i2c_smbus_write_byte(aps->client,CMD_CLR_PS_INT);
         if (ret)
         {
             printk(KERN_ERR "%s, line %d: clear proximity interrupt bit failed(%d)!\n", __func__, __LINE__, ret);
@@ -657,6 +658,7 @@ static void aps_9900_work_func(struct work_struct *work)
             printk(KERN_ERR "%s, line %d: p_flag is close, but raise prox interrupt, clear prox interrupt bit.\n", __func__, __LINE__);
         }
     }
+Light_init:
     /* ALS flag is open and the interrupt belongs to ALS */
     if (atomic_read(&l_flag) && (status & APDS9900_STATUS_ALS_BIT)) 
     {
@@ -674,7 +676,7 @@ static void aps_9900_work_func(struct work_struct *work)
             printk(KERN_ERR "%s, line %d: 0xffff <= cdata_high, reset to 0x%x!\n",  __func__, __LINE__, cdata_high);
         }
         /* clear als interrupt bit */
-        ret = set_9900_register(aps, 0x66,0, 0);
+        ret = i2c_smbus_write_byte(aps->client,CMD_CLR_ALS_INT);
         ret |= set_9900_register(aps, APDS9900_AILTL_REG, cdata_low, 1);
         ret |= set_9900_register(aps, APDS9900_AIHTL_REG, cdata_high, 1);
         if (ret)
@@ -715,13 +717,17 @@ static void aps_9900_work_func(struct work_struct *work)
         /* if lux<0,we need to change the gain which we can set register 0x0f */
         else {
                 printk(KERN_ERR "%s, line %d: Need to change gain(lux=%2d)\n", __func__, __LINE__, lux);
+                /*We should change gain,but we must input this status to framework*/
+                light_data_value = abs(lux);
+                input_report_abs(aps->input_dev, ABS_LIGHT, 6);
+                input_sync(aps->input_dev);
         }
     }   
     /* l_flag is close, but raise als interrupt: abnormal, clear the als interrupt bit */
     else if ((status & APDS9900_STATUS_ALS_BIT) && (!atomic_read(&l_flag)))
     {
         /* clear als interrupt bit */
-        ret = set_9900_register(aps, 0x66,0, 0);
+        ret = i2c_smbus_write_byte(aps->client,CMD_CLR_ALS_INT);
         if (ret)
         {
             printk(KERN_ERR "%s, line %d: clear als interrupt bit failed(%d)!", __func__, __LINE__, ret);
@@ -884,12 +890,19 @@ static int aps_9900_probe(
     /*Y300*/
     else if( machine_is_msm8x25_C8833D()
         || machine_is_msm8x25_U8833D()
-        || machine_is_msm8x25_U8833() )
+        || machine_is_msm8x25_U8833())
     {
         apds_9900_pwindows_value = Y300_WINDOW;
         apds_9900_pwave_value = Y300_WAVE; 
         p = &lsensor_adc_table_y300[0];
         aps9900_init_regdata[PPCOUNT_REG_INDEX].data = 0x0A;
+    }
+    else if(machine_is_msm8x25_Y300_J1())
+    {
+        apds_9900_pwindows_value = Y300J1_WINDOW;
+        apds_9900_pwave_value = Y300J1_WAVE;
+        aps9900_init_regdata[4].data = 8; //to increase the sensor sensitivity
+        p = &lsensor_adc_table_Y300J1[0];
     }
     else if( machine_is_msm7x27a_H867G() 
           || machine_is_msm7x27a_H868C())
@@ -899,12 +912,17 @@ static int aps_9900_probe(
         aps9900_init_regdata[4].data = 8; //to increase the sensor sensitivity
         p = &lsensor_adc_table_H867G[0];
     }
-    else if( machine_is_msm8x25_H881C() 
-        || machine_is_msm8x25_Y301_A1())
+    else if( machine_is_msm8x25_H881C())
     {
-       	apds_9900_pwindows_value = H881C_WINDOW;
-       	apds_9900_pwave_value = H881C_WAVE;
-       	p = &lsensor_adc_table_h881c[0];
+        apds_9900_pwindows_value = H881C_WINDOW;
+        apds_9900_pwave_value = H881C_WAVE;
+        p = &lsensor_adc_table_h881c[0];
+    }    else if (machine_is_msm8x25_Y301_A1())
+    {
+        apds_9900_pwindows_value = Y301_A1_WINDOW;
+        apds_9900_pwave_value = Y301_A1_WAVE;      
+        p = &lsensor_adc_table_h881c[0];
+        sunlight = 15000;//This value is from test
     }
     else
     {

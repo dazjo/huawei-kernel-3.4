@@ -68,6 +68,7 @@ typedef  struct _usbsdms_read_toc_cmd_type
 /* vendor and country string */
 #define COUNTRY_JAPAN   "jp"
 #define VENDOR_EMOBILE  "emobile"
+#define VENDOR_SOFTBANK "softbank"
 #define COUNTRY_US   "us"
 #define VENDOR_TRACFONE  "tracfone"
 

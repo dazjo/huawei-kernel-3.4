@@ -115,7 +115,7 @@ enum {
 #define FILTER_SAMPLE_NUMBER		4096           /*256LSB =1g*/  
 #define	GPIO_INT1                   19
 #define GPIO_INT2                   20
-#define GS_TIMRER                    (1000)           /*1000ms*/
+#define GS_TIMRER                    (1000*1000000)           /*1000000s*/
 
 #define ECS_IOCTL_READ_ACCEL_XYZ			_IOR(0xA1, 0x06, char[3])
 #define ECS_IOCTL_APP_SET_DELAY 			_IOW(0xA1, 0x18, short)
@@ -174,7 +174,7 @@ static signed short compass_sensor_data[3];
 static char gs_device_id[] = MMA8452_DRV_NAME;
 
 extern struct input_dev *sensor_dev;
-
+static atomic_t mma_status_flag;
 #ifdef CONFIG_MELFAS_UPDATE_TS_FIRMWARE
 extern struct gs_data *TS_updateFW_gs_data;
 #endif
@@ -193,56 +193,56 @@ static int mma8452_debug_mask;
 module_param_named(mma8452_debug, mma8452_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define mma8452_DBG(x...) do {\
-    if (mma8452_debug_mask) \
-        printk(KERN_DEBUG x);\
-    } while (0)
+	if (mma8452_debug_mask) \
+		printk(KERN_DEBUG x);\
+	} while (0)
 #define mma8452_PRINT_PER_TIMES 100
 unsigned int mma8452_times = 0;
 
 void mma8452_print_debug(int start_reg,int end_reg)
 {
-        int reg, ret;
+	int reg, ret;
 
-        for(reg = start_reg ; reg <= end_reg ; reg ++)
-        {                
-			/* read reg value */
-            ret = reg_read(this_gs_data,reg);
-			/* print reg info */
-            mma8452_DBG("mma8452 reg 0x%x values 0x%x\n",reg,ret);
-         }
+	for(reg = start_reg ; reg <= end_reg ; reg ++)
+	{
+		/* read reg value */
+		ret = reg_read(this_gs_data,reg);
+		/* print reg info */
+		mma8452_DBG("mma8452 reg 0x%x values 0x%x\n",reg,ret);
+	}
 
 }
 
 /**************************************************************************************/
 static inline int reg_read(struct gs_data *gs , int reg)
 {
-    int val;
+	int val;
 
-    mutex_lock(&gs->mlock);
+	mutex_lock(&gs->mlock);
 
-    val = i2c_smbus_read_byte_data(gs->client, reg);
-    if (val < 0)
-    {
-        printk(KERN_ERR "MMA8452 chip i2c %s failed! reg=0x%x, value=0x%x\n", __FUNCTION__, reg, val);
-    }
+	val = i2c_smbus_read_byte_data(gs->client, reg);
+	if (val < 0)
+	{
+		printk(KERN_ERR "MMA8452 chip i2c %s failed! reg=0x%x, value=0x%x\n", __FUNCTION__, reg, val);
+	}
 
-    mutex_unlock(&gs->mlock);
+	mutex_unlock(&gs->mlock);
 
-    return val;
+	return val;
 }
 static inline int reg_write(struct gs_data *gs, int reg, uint8_t val)
 {
-    int ret;
+	int ret;
 
-    mutex_lock(&gs->mlock);
-    ret = i2c_smbus_write_byte_data(gs->client, reg, val);
-    if(ret < 0)
-    {
-        printk(KERN_ERR "MMA8452 chip i2c %s failed! reg=0x%x, value=0x%x, ret=%d\n", __FUNCTION__, reg, val, ret);
-    }
-    mutex_unlock(&gs->mlock);
+	mutex_lock(&gs->mlock);
+	ret = i2c_smbus_write_byte_data(gs->client, reg, val);
+	if(ret < 0)
+	{
+		printk(KERN_ERR "MMA8452 chip i2c %s failed! reg=0x%x, value=0x%x, ret=%d\n", __FUNCTION__, reg, val, ret);
+	}
+	mutex_unlock(&gs->mlock);
 
-    return ret;
+	return ret;
 }
 
 /**************************************************************************************/
@@ -284,6 +284,7 @@ static int gs_mma8452_open(struct inode *inode, struct file *file)
 {	
 	/*gs active mode, modify the adc frequency to 50HZ*/
 	reg_write(this_gs_data, MMA8452_CTRL_REG1, 0x21);
+	atomic_set(&mma_status_flag, GS_RESUME);
 	if (this_gs_data->use_irq)
 		enable_irq(this_gs_data->client->irq);
 	else
@@ -296,13 +297,13 @@ static int gs_mma8452_release(struct inode *inode, struct file *file)
 {
 	/*gs standby mode*/
 	reg_write(this_gs_data, MMA8452_CTRL_REG1, 0x20); 
-
+	atomic_set(&mma_status_flag, GS_SUSPEND);
 	if (this_gs_data->use_irq)
 		disable_irq(this_gs_data->client->irq);
 	else
 		hrtimer_cancel(&this_gs_data->timer);
 
-	accel_delay = GS_TIMRER;	  
+	accel_delay = GS_TIMRER;
 
 	return 0;
 }
@@ -496,8 +497,7 @@ static void gs_work_func(struct work_struct *work)
     }
     else
     {
-        printk("MMA8452_CTRL_REG1 is %d \n",reg_read(gs, MMA8452_CTRL_REG1));
-        printk(KERN_ERR "%s, line %d: status=0x%x\n", __func__, __LINE__, status);
+        printk(KERN_ERR"%s, line %d:MMA8452_CTRL_REG1 is 0x%x ,status=0x%x\n",__func__, __LINE__,reg_read(gs, MMA8452_CTRL_REG1),status);
     }
     if(mma8452_debug_mask)
     {
@@ -517,11 +517,9 @@ static void gs_work_func(struct work_struct *work)
     }
     else
     {
-        /* hrtimer_start fail */
-        if (0 != hrtimer_start(&gs->timer, ktime_set(sesc, nsesc), HRTIMER_MODE_REL) )
-        {
-            printk(KERN_ERR "%s, line %d: hrtimer_start fail! sec=%d, nsec=%d\n", __func__, __LINE__, sesc, nsesc);
-        }
+        if(GS_RESUME == atomic_read(&mma_status_flag))
+            if (0 != hrtimer_start(&gs->timer, ktime_set(sesc, nsesc), HRTIMER_MODE_REL) )
+                printk(KERN_ERR "%s, line %d: hrtimer_start fail! sec=%d, nsec=%d\n", __func__, __LINE__, sesc, nsesc);
     }
 }
 
@@ -552,7 +550,7 @@ static int gs_config_int_pin(void)
 	{
 		printk(KERN_ERR "gpio_request failed for st gs int\n");
 		return -1;
-	}	
+	}
 
 	err = gpio_configure(GPIO_INT1, GPIOF_INPUT | IRQF_TRIGGER_HIGH);
 	if (err) 
@@ -560,7 +558,7 @@ static int gs_config_int_pin(void)
 		gpio_free(GPIO_INT1);
 		printk(KERN_ERR "gpio_config failed for gs int HIGH\n");
 		return -1;
-	}     
+	}
 
 	return 0;
 }
@@ -579,7 +577,6 @@ static int gs_probe(
 	struct gs_data *gs;
 	struct gs_platform_data *pdata = NULL;
 	/*delete 19 lines*/
-	    
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		printk(KERN_ERR "gs_mma8452_probe: need I2C_FUNC_I2C\n");
 		ret = -ENODEV;
@@ -597,18 +594,7 @@ static int gs_probe(
 			}
 		}
 #endif
-		if(pdata->adapt_fn != NULL){
-			ret = pdata->adapt_fn();
-			if(ret > 0){
-				client->addr = pdata->slave_addr;//actual address
-				printk(KERN_INFO "%s:change i2c addr to actrual address = %d\n", __FUNCTION__, pdata->slave_addr);
-				if(client->addr == 0){
-					printk(KERN_ERR "%s: bad i2c address = %d\n", __FUNCTION__, client->addr);
-					ret = -EFAULT;
-					goto err_power_failed;
-				}
-			}
-		}
+		/*adapt_fn is out of style,delete*/
 		if(pdata->get_compass_gs_position != NULL){
 			compass_gs_position=pdata->get_compass_gs_position();
 		}
@@ -621,8 +607,7 @@ static int gs_probe(
 			}
 		}
 	}
-	
-	printk(KERN_INFO "%s:check freescale mma8452 chip ID\n", __FUNCTION__);
+
 	result = i2c_smbus_read_byte_data(client, MMA8452_WHO_AM_I);
 
 	if (0 > result) {	//compare the address value 
@@ -670,12 +655,11 @@ static int gs_probe(
 		/* fail? */
 		goto err_detect_failed;
 	}
-
-    #ifdef CONFIG_HUAWEI_HW_DEV_DCT
-    /* detect current device successful, set the flag as present */
-    set_hw_dev_flag(DEV_I2C_G_SENSOR);
-    #endif
-
+	atomic_set(&mma_status_flag, GS_SUSPEND);
+	#ifdef CONFIG_HUAWEI_HW_DEV_DCT
+	/* detect current device successful, set the flag as present */
+	set_hw_dev_flag(DEV_I2C_G_SENSOR);
+	#endif
 	if (sensor_dev == NULL)
 	{
 		gs->input_dev = input_allocate_device();
@@ -742,45 +726,45 @@ static int gs_probe(
 	register_early_suspend(&gs->early_suspend);
 #endif
 
-    gs_wq = create_singlethread_workqueue("gs_wq");
-    if (!gs_wq)
-    {
-        ret = -ENOMEM;
-        printk(KERN_ERR "%s, line %d: create_singlethread_workqueue fail!\n", __func__, __LINE__);
-        goto err_create_workqueue_failed;
-    }
-    this_gs_data =gs;
+	gs_wq = create_singlethread_workqueue("gs_wq");
+	if (!gs_wq)
+	{
+		ret = -ENOMEM;
+		printk(KERN_ERR "%s, line %d: create_singlethread_workqueue fail!\n", __func__, __LINE__);
+		goto err_create_workqueue_failed;
+	}
+	this_gs_data =gs;
 
-    //set_st303_gs_support(true);
-    if(pdata && pdata->init_flag)
-        *(pdata->init_flag) = 1;
-    ret = set_sensor_input(ACC, gs->input_dev->dev.kobj.name);
-    if (ret) {
-        dev_err(&client->dev, "%s set_sensor_input failed\n", __func__);
-        goto err_create_workqueue_failed;
-    }
-    printk(KERN_INFO "gs_probe: Start MMA8452  in %s mode\n", gs->use_irq ? "interrupt" : "polling");
+	//set_st303_gs_support(true);
+	if(pdata && pdata->init_flag)
+		*(pdata->init_flag) = 1;
+	ret = set_sensor_input(ACC, gs->input_dev->dev.kobj.name);
+	if (ret) {
+		dev_err(&client->dev, "%s set_sensor_input failed\n", __func__);
+		goto err_create_workqueue_failed;
+	}
+	printk("My G-sensor is MMA8452\n");
 
 #ifdef CONFIG_MELFAS_UPDATE_TS_FIRMWARE
-    TS_updateFW_gs_data = this_gs_data;
+	TS_updateFW_gs_data = this_gs_data;
 #endif
 
-    set_sensors_list(G_SENSOR);
-    return 0;
+	set_sensors_list(G_SENSOR);
+	return 0;
 
 err_create_workqueue_failed:
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&gs->early_suspend);
+	unregister_early_suspend(&gs->early_suspend);
 #endif
 
-    if (gs->use_irq)
-    {
-        free_irq(client->irq, gs);
-    }
-    else
-    {
-        hrtimer_cancel(&gs->timer);
-    }
+	if (gs->use_irq)
+	{
+		free_irq(client->irq, gs);
+	}
+	else
+	{
+		hrtimer_cancel(&gs->timer);
+	}
 err_misc_device_register_failed:
 	misc_deregister(&gsensor_device);
 
@@ -794,13 +778,7 @@ err_alloc_data_failed:
 #ifndef   GS_POLLING 
 	gs_free_int();
 #endif
-/*turn down the power*/
 err_power_failed:
-#ifdef CONFIG_ARCH_MSM7X30
-	if(pdata->gs_power != NULL){
-		pdata->gs_power(IC_PM_OFF);
-	}
-#endif
 err_check_functionality_failed:
 	return ret;
 }
@@ -809,7 +787,7 @@ static int gs_remove(struct i2c_client *client)
 {
 	struct gs_data *gs = i2c_get_clientdata(client);
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&gs->early_suspend);
+	unregister_early_suspend(&gs->early_suspend);
 #endif
 	if (gs->use_irq)
 		free_irq(client->irq, gs);
@@ -825,7 +803,7 @@ static int gs_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	int ret;
 	struct gs_data *gs = i2c_get_clientdata(client);
-
+	atomic_set(&mma_status_flag, GS_SUSPEND);
 	if (gs->use_irq)
 		disable_irq(client->irq);
 	else
@@ -841,15 +819,13 @@ static int gs_suspend(struct i2c_client *client, pm_message_t mesg)
 static int gs_resume(struct i2c_client *client)
 {
 	struct gs_data *gs = i2c_get_clientdata(client);
-
-	/*gs active mode, modify the adc frequency to 50HZ*/
-	reg_write(gs, MMA8452_CTRL_REG1, 0x21);
-	
+	/*gs active mode, modify the adc frequency to 200HZ until update ODR*/
+	reg_write(gs, MMA8452_CTRL_REG1, ODR200F | ACTIVE);
+	atomic_set(&mma_status_flag, GS_RESUME);
 	if (!gs->use_irq)
 		hrtimer_start(&gs->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
 	else
 		enable_irq(client->irq);
-	
 
 	return 0;
 }
