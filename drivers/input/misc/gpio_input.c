@@ -348,6 +348,16 @@ int gpio_event_input_func(struct gpio_event_input_devs *input_devs,
 			"mode\n", input_devs->dev[0]->name,
 			(input_devs->count > 1) ? "..." : "",
 			ret == 0 ? "interrupt" : "polling");
+#ifdef CONFIG_HUAWEI_KERNEL
+		if(di->func)
+		{
+			ret = di->func(ds->input_devs,di);
+			if(ret)
+			{
+				pr_err("gpio_event_input_func: function failed!\n");
+			}
+		}
+#endif
 
 		hrtimer_init(&ds->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		ds->timer.function = gpio_event_input_timer_func;

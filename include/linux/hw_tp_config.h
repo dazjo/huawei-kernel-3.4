@@ -15,8 +15,7 @@
 #define SYN_CONFIG_SIZE 32 * 16
 #define CURRENT_PR_VERSION  1191601
 /*FW for 4.0 inches touch with independent button*/
-#define CURRENT_PR_VERSION_BTN 1315366
-
+#define CURRENT_PR_VERSION_BTN 1469183
 #define TP_ID0  127
 #define TP_ID1  128
 

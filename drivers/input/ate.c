@@ -1220,11 +1220,27 @@ static ssize_t get_virtualkey_config(void)
 return 0;
 }
 #endif
+static bool ate_enable = false;
+static int __init early_parse_ate_enable_cmdline(char * p)
+{
+    if(p)
+    {
+        if (!strcmp(p,"true"))
+        {
+            ate_enable = true;
+        }
+    }
+    return 0;
+}
+early_param("ate_enable",early_parse_ate_enable_cmdline);
 
 static int __init ate_init(void)
 {
     int ret;
-
+    if(true != ate_enable)
+    {
+        return 0;
+    }
     ate_dt = kmalloc(sizeof(struct ate_data), GFP_KERNEL);
     if(ate_dt == NULL) {
         ret = -ENOMEM;

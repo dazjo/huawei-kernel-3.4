@@ -1199,6 +1199,7 @@ static struct dsi_cmd_desc pkt_size_cmd[] = {
  *
  * ov_mutex need to be acquired before call this function.
  */
+/* Add lcd panel type */
 int mipi_dsi_cmds_rx(struct msm_fb_data_type *mfd,
 			struct dsi_buf *tp, struct dsi_buf *rp,
 			struct dsi_cmd_desc *cmds, int rlen)
@@ -1261,7 +1262,8 @@ int mipi_dsi_cmds_rx(struct msm_fb_data_type *mfd,
 	mipi_dsi_cmd_dma_add(tp, cmds);
 #if (LCD_HX8369A_TIANMA_ESD_SIGN || LCD_OTM8009A_CMI_ESD_SIGN)
 	if(MIPI_CMD_HX8369A_TIANMA_FWVGA == get_lcd_panel_type()
-	|| MIPI_CMD_OTM8009A_CHIMEI_WVGA == get_lcd_panel_type())
+	|| MIPI_CMD_OTM8009A_CHIMEI_WVGA == get_lcd_panel_type()
+	|| MIPI_CMD_OTM8009A_CHIMEI_FWVGA == get_lcd_panel_type())
 		mipi_set_tx_power_mode(0);//entry high speed mode  
 #endif
 	/* transmit read comamnd to client */
@@ -1283,7 +1285,8 @@ int mipi_dsi_cmds_rx(struct msm_fb_data_type *mfd,
 	}
 #if (LCD_HX8369A_TIANMA_ESD_SIGN || LCD_OTM8009A_CMI_ESD_SIGN)
 	if(MIPI_CMD_HX8369A_TIANMA_FWVGA == get_lcd_panel_type()
-	|| MIPI_CMD_OTM8009A_CHIMEI_WVGA == get_lcd_panel_type())
+	|| MIPI_CMD_OTM8009A_CHIMEI_WVGA == get_lcd_panel_type()
+	|| MIPI_CMD_OTM8009A_CHIMEI_FWVGA == get_lcd_panel_type())
 		mipi_set_tx_power_mode(1);//entry low power mode  
 #endif
 	mipi_dsi_cmd_dma_rx(rp, cnt);
@@ -1329,13 +1332,13 @@ int mipi_dsi_cmds_rx(struct msm_fb_data_type *mfd,
 
 	#if (LCD_HX8369A_TIANMA_ESD_SIGN || LCD_OTM8009A_CMI_ESD_SIGN)
 	if(MIPI_CMD_HX8369A_TIANMA_FWVGA == get_lcd_panel_type()
-	|| MIPI_CMD_OTM8009A_CHIMEI_WVGA == get_lcd_panel_type())
+	|| MIPI_CMD_OTM8009A_CHIMEI_WVGA == get_lcd_panel_type()
+	|| MIPI_CMD_OTM8009A_CHIMEI_FWVGA == get_lcd_panel_type())
 		mipi_set_tx_power_mode(0);//entry high speed mode  
 #endif
 
 	return rp->len;
 }
-
 int mipi_dsi_cmds_rx_new(struct dsi_buf *tp, struct dsi_buf *rp,
 			struct dcs_cmd_req *req, int rlen)
 {
@@ -1455,7 +1458,7 @@ int mipi_dsi_cmds_rx_new(struct dsi_buf *tp, struct dsi_buf *rp,
 
 	return rp->len;
 }
-
+/* Add lcd panel type */
 int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 {
 
@@ -1503,7 +1506,8 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
     if( ((MIPI_CMD_OTM8009A_CHIMEI_WVGA == panel_type) && LCD_OTM8009A_CMI_ESD_SIGN)
         || (MIPI_CMD_NT35510_BOE_FWVGA == panel_type)
         || (MIPI_CMD_NT35510_BOE_WVGA == panel_type)
-        || (MIPI_CMD_NT35510_CHIMEI_WVGA == panel_type))
+        || (MIPI_CMD_NT35510_CHIMEI_WVGA == panel_type)
+        ||(MIPI_CMD_OTM8009A_CHIMEI_WVGA == panel_type))
     {
         /* set the time out. thread will go on beyond the time restriction */
         wait_for_completion_timeout(&dsi_dma_comp,HZ/10);
@@ -1517,7 +1521,6 @@ int mipi_dsi_cmd_dma_tx(struct dsi_buf *tp)
 	tp->dmap = 0;
 	return tp->len;
 }
-
 int mipi_dsi_cmd_dma_rx(struct dsi_buf *rp, int rlen)
 {
 	uint32 *lp, data;

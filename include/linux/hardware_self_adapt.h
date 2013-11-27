@@ -192,7 +192,8 @@ typedef enum
     HW_VER_SUB_SURF          = 0xF,
     HW_VER_SUB_MAX           = 0xF
 }hw_ver_sub_type;
-
+#define GS_SUSPEND  0
+#define GS_RESUME   1
 /*add new g-sensor*/
 typedef enum
 {

@@ -59,6 +59,12 @@ static struct sequence nt35512_cabc_enable_table[] =
 	{0x00029,MIPI_TYPE_END,0}
 };
 
+static struct sequence nt35512_cabc_set_dimming_off_table[] =
+{
+	{0x00053,MIPI_DCS_COMMAND,0},
+	{0x00024,TYPE_PARAMETER,0},//no dimming.
+	{0x00029,MIPI_TYPE_END,0}
+};
 /*Add nt35512 video mode for byd*/
 /*Add new gamma2.5 parameter and Optimize the display effect */
 static struct sequence nt35512_byd_lcd_init_table[] =
@@ -1138,8 +1144,15 @@ static int __devinit mipi_nt35512_lcd_probe(struct platform_device *pdev)
 void nt35512_set_cabc_backlight(struct msm_fb_data_type *mfd,uint32 bl_level)
 {	
 	nt35512_cabc_enable_table[1].reg = bl_level; // 1 will be changed if modify init code
-	process_mipi_table(mfd,&nt35512_tx_buf,(struct sequence*)&nt35512_cabc_enable_table,
-		 ARRAY_SIZE(nt35512_cabc_enable_table), lcd_panel_wvga);
+
+    if(0 == bl_level)
+    {
+        /* 0 level will disable dimming func */
+        process_mipi_table(mfd,&nt35512_tx_buf,(struct sequence*)&nt35512_cabc_set_dimming_off_table,
+                    ARRAY_SIZE(nt35512_cabc_set_dimming_off_table), lcd_panel_wvga);
+    }
+    process_mipi_table(mfd,&nt35512_tx_buf,(struct sequence*)&nt35512_cabc_enable_table,
+                                ARRAY_SIZE(nt35512_cabc_enable_table), lcd_panel_wvga);
 }
 
 static struct platform_driver this_driver = {

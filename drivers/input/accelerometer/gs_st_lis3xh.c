@@ -81,6 +81,7 @@ static const struct {
 };
 static struct workqueue_struct *gs_wq;
 extern struct input_dev *sensor_dev;
+static atomic_t st_status_flag;
 
 struct gs_data {
 	uint16_t addr;
@@ -114,55 +115,54 @@ static int lis3xh_debug_mask;
 module_param_named(lis3xh_debug, lis3xh_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define lis3xh_DBG(x...) do {\
-    if (lis3xh_debug_mask) \
-        printk(KERN_DEBUG x);\
-    } while (0)
+	if (lis3xh_debug_mask) \
+		printk(KERN_DEBUG x);\
+	} while (0)
 #define lis3xh_PRINT_PER_TIMES 100
 unsigned int list3xh_times = 0;
 
 void lis3xh_print_debug(int start_reg,int end_reg)
 {
-        int reg, ret;
+	int reg, ret;
 
-        for(reg = start_reg ; reg <= end_reg ; reg ++)
-        {
-			/* read reg value */
-            ret = reg_read(this_gs_data,reg);
-			/* print reg info */
-            lis3xh_DBG("lis3xh reg 0x%x values 0x%x\n",reg,ret);
-        }
-
+	for(reg = start_reg ; reg <= end_reg ; reg ++)
+	{
+		/* read reg value */
+		ret = reg_read(this_gs_data,reg);
+		/* print reg info */
+		lis3xh_DBG("lis3xh reg 0x%x values 0x%x\n",reg,ret);
+	}
 }
 
 static inline int reg_read(struct gs_data *gs , int reg)
 {
-    int val;
+	int val;
 
-    mutex_lock(&gs->mlock);
+	mutex_lock(&gs->mlock);
 
-    val = i2c_smbus_read_byte_data(gs->client, reg);
-    if (val < 0)
-    {
-        printk(KERN_ERR "i2c_smbus_read_byte_data failed! reg=0x%x, value=0x%x\n", reg, val);
-    }
+	val = i2c_smbus_read_byte_data(gs->client, reg);
+	if (val < 0)
+	{
+		printk(KERN_ERR "i2c_smbus_read_byte_data failed! reg=0x%x, value=0x%x\n", reg, val);
+	}
 
-    mutex_unlock(&gs->mlock);
+	mutex_unlock(&gs->mlock);
 
-    return val;
+	return val;
 }
 static inline int reg_write(struct gs_data *gs, int reg, uint8_t val)
 {
-    int ret;
+	int ret;
 
-    mutex_lock(&gs->mlock);
-    ret = i2c_smbus_write_byte_data(gs->client, reg, val);
-    if(ret < 0)
-    {
-        printk(KERN_ERR "i2c_smbus_write_byte_data failed! reg=0x%x, value=0x%x, ret=%d\n", reg, val, ret);
-    }
-    mutex_unlock(&gs->mlock);
+	mutex_lock(&gs->mlock);
+	ret = i2c_smbus_write_byte_data(gs->client, reg, val);
+	if(ret < 0)
+	{
+		printk(KERN_ERR "i2c_smbus_write_byte_data failed! reg=0x%x, value=0x%x, ret=%d\n", reg, val, ret);
+	}
+	mutex_unlock(&gs->mlock);
 
-    return ret;
+	return ret;
 }
 
 #define MG_PER_SAMPLE   	720            /*HAL: 720=1g*/                       
@@ -211,38 +211,34 @@ static void gs_st_update_odr(struct gs_data  *gs)
 	}
 }
 static int gs_st_open(struct inode *inode, struct file *file)
-{			
-       reg_read(this_gs_data, GS_ST_REG_STATUS ); /* read status */
+{
+	reg_read(this_gs_data, GS_ST_REG_STATUS ); /* read status */
+	/* enable x, y, z; low power mode 50 HZ */	
+	reg_write(this_gs_data, GS_ST_REG_CTRL1, GS_ST_CTRL1_PD|
+		GS_ST_CTRL1_Zen|
+		GS_ST_CTRL1_Yen|
+		GS_ST_CTRL1_Xen);
+	reg_write(this_gs_data, GS_ST_REG_CTRL3, GS_INTMODE_DATA_READY);
 
-       /* enable x, y, z; low power mode 50 HZ */	
-       reg_write(this_gs_data, GS_ST_REG_CTRL1, GS_ST_CTRL1_PD|
-	       GS_ST_CTRL1_Zen|
-	       GS_ST_CTRL1_Yen|
-	       GS_ST_CTRL1_Xen);
-	
-       reg_write(this_gs_data, GS_ST_REG_CTRL3, GS_INTMODE_DATA_READY);
+	reg_read(this_gs_data, GS_ST_REG_OUT_XL ); /* read X */
+	reg_read(this_gs_data, GS_ST_REG_OUT_XH ); /* read X */
+	reg_read(this_gs_data, GS_ST_REG_OUT_YL ); /* read Y */
+	reg_read(this_gs_data, GS_ST_REG_OUT_YH ); /* read Y */
+	reg_read(this_gs_data, GS_ST_REG_OUT_ZL ); /* read Z*/
+	reg_read(this_gs_data, GS_ST_REG_OUT_ZH ); /* read Z*/
+	atomic_set(&st_status_flag, GS_RESUME);
+	if (this_gs_data->use_irq)
+		enable_irq(this_gs_data->client->irq);
+	else
+		hrtimer_start(&this_gs_data->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
 
-       reg_read(this_gs_data, GS_ST_REG_OUT_XL ); /* read X */
-       reg_read(this_gs_data, GS_ST_REG_OUT_XH ); /* read X */
-       reg_read(this_gs_data, GS_ST_REG_OUT_YL ); /* read Y */
-       reg_read(this_gs_data, GS_ST_REG_OUT_YH ); /* read Y */
-       reg_read(this_gs_data, GS_ST_REG_OUT_ZL ); /* read Z*/
-       reg_read(this_gs_data, GS_ST_REG_OUT_ZH ); /* read Z*/
-
-       if (this_gs_data->use_irq)
-	       enable_irq(this_gs_data->client->irq);
-       else
-	       hrtimer_start(&this_gs_data->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
-	
-		
-       return nonseekable_open(inode, file);
+	return nonseekable_open(inode, file);
 }
-
 static int gs_st_release(struct inode *inode, struct file *file)
 {
 	
 	reg_write(this_gs_data, GS_ST_REG_CTRL1, 0x00);
-	
+	atomic_set(&st_status_flag, GS_SUSPEND);
 	if (this_gs_data->use_irq)
 		disable_irq(this_gs_data->client->irq);
 	else
@@ -255,7 +251,7 @@ static int gs_st_release(struct inode *inode, struct file *file)
 
 static long
 gs_st_ioctl(struct file *file, unsigned int cmd,
-	   unsigned long arg)
+		unsigned long arg)
 {
 	
 	void __user *argp = (void __user *)arg;
@@ -452,8 +448,7 @@ static void gs_work_func(struct work_struct *work)
     }
     else
     {
-        printk("MMA8452_CTRL_REG1 is %d \n",reg_read(gs, GS_ST_REG_CTRL1));
-        printk(KERN_ERR "%s, line %d: status=0x%x\n", __func__, __LINE__, status);
+        printk(KERN_ERR"%s, line %d,GS_ST_REG_CTRL1 is 0x%x,status = 0x%x \n",__func__, __LINE__,reg_read(gs, GS_ST_REG_CTRL1),status);
     }
     if(lis3xh_debug_mask)
     {
@@ -474,11 +469,9 @@ static void gs_work_func(struct work_struct *work)
     }
     else
     {
-        /* hrtimer_start fail */
-        if (0 != hrtimer_start(&gs->timer, ktime_set(sesc, nsesc), HRTIMER_MODE_REL) )
-        {
-            printk(KERN_ERR "%s, line %d: hrtimer_start fail! sec=%d, nsec=%d\n", __func__, __LINE__, sesc, nsesc);
-        }
+        if(GS_RESUME == atomic_read(&st_status_flag))
+            if (0 != hrtimer_start(&gs->timer, ktime_set(sesc, nsesc), HRTIMER_MODE_REL) )
+                printk(KERN_ERR "%s, line %d: hrtimer_start fail! sec=%d, nsec=%d\n", __func__, __LINE__, sesc, nsesc);
     }
 }
 
@@ -508,15 +501,14 @@ static int gs_config_int_pin(void)
 	{
 		printk(KERN_ERR "gpio_request failed for st gs int\n");
 		return -1;
-	}	
-     
+	}
 	err = gpio_configure(GPIO_INT1, GPIOF_INPUT | IRQF_TRIGGER_HIGH);
 	if (err)
-     	{
-     		gpio_free(GPIO_INT1);
+	{
+			gpio_free(GPIO_INT1);
 		printk(KERN_ERR "gpio_config failed for gs int HIGH\n");
 		return -1;
-	}     
+	}
 
 	return 0;
 }
@@ -538,8 +530,6 @@ static int gs_probe(
 	struct gs_platform_data *pdata = NULL;
 
 	/*delete 19 lines*/
-	printk("my gs_probe_lis3xh\n");
-    
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		printk(KERN_ERR "gs_probe: need I2C_FUNC_I2C\n");
 		ret = -ENODEV;
@@ -557,18 +547,7 @@ static int gs_probe(
 			}
 		}
 #endif
-		if(pdata->adapt_fn != NULL){
-			ret = pdata->adapt_fn();
-			if(ret > 0){
-				client->addr = pdata->slave_addr;//actual address
-				printk(KERN_INFO "%s:change i2c addr to actrual address = %d\n", __FUNCTION__, pdata->slave_addr);
-				if(client->addr == 0){
-					printk(KERN_ERR "%s: bad i2c address = %d\n", __FUNCTION__, client->addr);
-					ret = -EFAULT;
-					goto err_power_failed;
-				}
-			}
-		}
+		/*adapt_fn is out of style,delete*/
 		
 		if(pdata->get_compass_gs_position != NULL){
 			compass_gs_position=pdata->get_compass_gs_position();
@@ -582,7 +561,7 @@ static int gs_probe(
 				goto err_power_failed;
 			}
 		}
-	}
+	} 
 #ifndef   GS_POLLING 	
 	ret = gs_config_int_pin();
 	if(ret <0)
@@ -603,51 +582,48 @@ static int gs_probe(
 	gs->client = client;
 	i2c_set_clientdata(client, gs);
 
-	printk("mode is %x\n", reg_read(gs, 0x20));
 	gs->sub_type = reg_read(gs, 0x0f);
-	printk("sub_type = %d\n", gs->sub_type);
-	printk("gs is %s\n", (gs->sub_type==0x33)? "ST LIS3DH":"ST LIS331DLH");
 	/*this plan is provided by ST company,detail is attaching on the dts website*/
-    reg_st = reg_read(gs, 0x1E);
-    reg_st = reg_st | 0x80 ;
-    ret = reg_write(gs, 0x1E, reg_st);
-    if (ret < 0) 
-    {
+	reg_st = reg_read(gs, 0x1E);
+	reg_st = reg_st | 0x80 ;
+	ret = reg_write(gs, 0x1E, reg_st);
+	if (ret < 0) 
+	{
 		printk(KERN_ERR "write 0x1E fail at first time!\n");
 		ret = reg_write(gs, 0x1E, reg_st);
-        if (ret < 0) 
-        {
-            printk(KERN_ERR "write 0x1E fail at second time!\n");
-        }
-        else
-        {
-            printk(KERN_ERR "write 0x1E success at second time!\n");
-        }
+		if (ret < 0) 
+		{
+			printk(KERN_ERR "write 0x1E fail at second time!\n");
+		}
+		else
+		{
+			printk(KERN_ERR "write 0x1E success at second time!\n");
+		}
 	}
-    else
-    {
-        printk(KERN_ERR "write 0x1E success at first time!\n");
-    }
-    reg_st = reg_read(gs, 0x1E);
-    if(0x80 == (reg_st & 0x80))
-    {
-        printk("set and read success!\n");
-    }
-    else
-    {
-        printk("set failed!\n");
-    }
+	else
+	{
+	printk(KERN_ERR "write 0x1E success at first time!\n");
+	}
+	reg_st = reg_read(gs, 0x1E);
+	if(0x80 == (reg_st & 0x80))
+	{
+		printk("set and read success!\n");
+	}
+	else
+	{
+		printk("set failed!\n");
+	}
 	ret = reg_write(gs, GS_ST_REG_CTRL2, 0x00); /* device command = ctrl_reg2 */
 	if (ret < 0) {
 		printk(KERN_ERR "i2c_smbus_write_byte_data failed\n");
 		/* fail? */
 		goto err_detect_failed;
 	}
-
-    #ifdef CONFIG_HUAWEI_HW_DEV_DCT
-    /* detect current device successful, set the flag as present */
-    set_hw_dev_flag(DEV_I2C_G_SENSOR);
-    #endif
+	atomic_set(&st_status_flag, GS_SUSPEND);
+	#ifdef CONFIG_HUAWEI_HW_DEV_DCT
+	/* detect current device successful, set the flag as present */
+	set_hw_dev_flag(DEV_I2C_G_SENSOR);
+	#endif
 
 	if (sensor_dev == NULL)
 	{
@@ -720,40 +696,40 @@ static int gs_probe(
 	register_early_suspend(&gs->early_suspend);
 #endif
 
-    gs_wq = create_singlethread_workqueue("gs_wq");
-    if (!gs_wq)
-    {
-        ret = -ENOMEM;
-        printk(KERN_ERR "%s, line %d: create_singlethread_workqueue fail!\n", __func__, __LINE__);
-        goto err_create_workqueue_failed;
-    }
-    this_gs_data =gs;
+	gs_wq = create_singlethread_workqueue("gs_wq");
+	if (!gs_wq)
+	{
+		ret = -ENOMEM;
+		printk(KERN_ERR "%s, line %d: create_singlethread_workqueue fail!\n", __func__, __LINE__);
+		goto err_create_workqueue_failed;
+	}
+	this_gs_data =gs;
 
-    if (pdata && pdata->init_flag)
-        *(pdata->init_flag) = 1;
-    ret = set_sensor_input(ACC, gs->input_dev->dev.kobj.name);
-    if (ret) {
-        dev_err(&client->dev, "%s set_sensor_input failed\n", __func__);
-        goto err_create_workqueue_failed;
-    }
-     printk(KERN_INFO "gs_probe: Start LIS35DE in %s mode\n", gs->use_irq ? "interrupt" : "polling");
+	if (pdata && pdata->init_flag)
+		*(pdata->init_flag) = 1;
+	ret = set_sensor_input(ACC, gs->input_dev->dev.kobj.name);
+	if (ret) {
+		dev_err(&client->dev, "%s set_sensor_input failed\n", __func__);
+		goto err_create_workqueue_failed;
+	}
+	printk("My G-sensor is ST-LIS35DE\n");
 
-    set_sensors_list(G_SENSOR);
-    return 0;
+	set_sensors_list(G_SENSOR);
+	return 0;
 
 err_create_workqueue_failed:
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&gs->early_suspend);
+	unregister_early_suspend(&gs->early_suspend);
 #endif
 
-    if (gs->use_irq)
-    {
-        free_irq(client->irq, gs);
-    }
-    else
-    {
-        hrtimer_cancel(&gs->timer);
-    }
+	if (gs->use_irq)
+	{
+		free_irq(client->irq, gs);
+	}
+	else
+	{
+		hrtimer_cancel(&gs->timer);
+	}
 err_misc_device_register_failed:
 		misc_deregister(&gsensor_device);
 		
@@ -770,13 +746,7 @@ err_alloc_data_failed:
 #ifndef   GS_POLLING 
 	gs_free_int();
 #endif
-/*turn down the power*/	
 err_power_failed:
-#ifdef CONFIG_ARCH_MSM7X30
-	if(pdata->gs_power != NULL){
-		pdata->gs_power(IC_PM_OFF);
-	}
-#endif
 err_check_functionality_failed:
 	return ret;
 }
@@ -785,7 +755,7 @@ static int gs_remove(struct i2c_client *client)
 {
 	struct gs_data *gs = i2c_get_clientdata(client);
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&gs->early_suspend);
+	unregister_early_suspend(&gs->early_suspend);
 #endif
 	if (gs->use_irq)
 		free_irq(client->irq, gs);
@@ -802,10 +772,9 @@ static int gs_remove(struct i2c_client *client)
 
 static int gs_suspend(struct i2c_client *client, pm_message_t mesg)
 {
-     
-	 int ret;
+	int ret;
 	struct gs_data *gs = i2c_get_clientdata(client);
-
+	atomic_set(&st_status_flag, GS_SUSPEND);
 	if (gs->use_irq)
 		disable_irq(client->irq);
 	else
@@ -829,13 +798,13 @@ static int gs_suspend(struct i2c_client *client, pm_message_t mesg)
 static int gs_resume(struct i2c_client *client)
 {
 	struct gs_data *gs = i2c_get_clientdata(client);
-	
-	reg_write(gs, GS_ST_REG_CTRL1, GS_ST_CTRL1_PD|
+	/*Make ODR to 200HZ as if some apk does't update ODR when resume*/
+	reg_write(gs, GS_ST_REG_CTRL1, ODR200F|
 						GS_ST_CTRL1_Zen|
 						GS_ST_CTRL1_Yen|
 						GS_ST_CTRL1_Xen); /* enable abs int */
 	reg_write(gs, GS_ST_REG_CTRL3, GS_INTMODE_DATA_READY);/*active mode*/
-    
+	atomic_set(&st_status_flag, GS_RESUME);
 	if (!gs->use_irq)
 		hrtimer_start(&gs->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
 	else

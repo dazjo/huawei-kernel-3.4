@@ -55,7 +55,7 @@ u8 g_range;
 #define ZOUT_L_REG		0x0A
 #define ZOUT_H_REG		0x0B
 
-#define GS_KX_TIMRER		(1000)		/*1000ms*/
+#define GS_KX_TIMRER		(1000*1000000)		/*1000000s*/
 #define WHO_AM_I		0x0F
 /* CONTROL REGISTERS */
 #define INT_REL			0x1A

@@ -27,5 +27,6 @@ extern struct platform_device keypad_device_default;
  * for tending to promote code unity.
  */
 extern struct platform_device keypad_device_u8185;
+extern struct platform_device keypad_device_y300j1;
 #endif
 #endif

@@ -862,6 +862,12 @@ static inline bool can_support_rndis(struct usb_configuration *c)
         printk("%s: us/tracfone product, rndis not supported\n", __func__);
         return false; 
     }
+    else if(!strcmp(usb_para_data.vender_para.country_name, COUNTRY_JAPAN)
+        && !strcmp(usb_para_data.vender_para.vender_name, VENDOR_SOFTBANK))
+    {
+        printk("%s: jp/softbank product, rndis not supported\n", __func__);
+        return false;
+    }
     else
     {
         printk("%s: general product, rndis supported\n", __func__);

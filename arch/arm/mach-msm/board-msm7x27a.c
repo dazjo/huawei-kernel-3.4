@@ -271,10 +271,11 @@ static unsigned int get_pmem_adsp_size(void)
 	|| machine_is_msm8x25_U8950D()
 	/*delete some line; to reduce pmem for releasing memory*/
 	||machine_is_msm8x25_U8950()){
-			return MSM_PMEM_ADSP_BIG_SIZE;		
+			return CAMERA_ZSL_SIZE;		
 		}
 	else if (machine_is_msm7x27a_H867G()
-           || machine_is_msm7x27a_H868C())
+           || machine_is_msm7x27a_H868C()
+	   || machine_is_msm8x25_Y301_A1() )
 	{
 		return  MSM_3M_PMEM_ADSP_SIZE;
 	}	
@@ -886,9 +887,10 @@ static void fix_sizes(void)
 		pmem_adsp_size = get_pmem_adsp_size();
 		printk("pmem_adsp_size=%08x\n",pmem_adsp_size);
 	}
-
+/*delete qcom code */
+/*
 	if (get_ddr_size() > SZ_512M)
-		pmem_adsp_size = CAMERA_ZSL_SIZE;
+		pmem_adsp_size = CAMERA_ZSL_SIZE;*/
 #ifdef CONFIG_ION_MSM
 	msm_ion_camera_size = pmem_adsp_size;
 	msm_ion_audio_size = (MSM_PMEM_AUDIO_SIZE + PMEM_KERNEL_EBI1_SIZE);
@@ -1114,6 +1116,7 @@ static void __init msm8625_reserve(void)
 
 	memblock_remove(MSM8625_SECONDARY_PHYS, SZ_8);
 	memblock_remove(MSM8625_WARM_BOOT_PHYS, SZ_32);
+	memblock_remove(MSM8625_NON_CACHE_MEM, SZ_2K);
 }
 
 static void __init msm7x27a_device_i2c_init(void)
@@ -1295,6 +1298,7 @@ static void __init virtualkeys_init(void)
         || machine_is_msm8x25_C8833D()
         || machine_is_msm8x25_U8833D()
         || machine_is_msm8x25_U8833()
+        || machine_is_msm8x25_Y300_J1()
         || machine_is_msm7x27a_C8820()
         || machine_is_msm8x25_C8812P())
     {
@@ -1816,6 +1820,16 @@ MACHINE_START(MSM8X25_H881C, "MSM8x25 H881C BOARD")
 	.handle_irq	= gic_handle_irq,
 MACHINE_END
 MACHINE_START(MSM8X25_Y301_A1, "MSM8x25 Y301_A1 BOARD")
+	.atag_offset    = PHYS_OFFSET + 0x100,
+	.map_io         = msm8625_map_io,
+	.reserve        = msm8625_reserve,
+	.init_irq       = msm8625_init_irq,
+	.init_machine   = msm7x2x_init,
+	.timer          = &msm_timer,
+	.init_early     = msm7x2x_init_early,
+	.handle_irq	= gic_handle_irq,
+MACHINE_END
+MACHINE_START(MSM8X25_Y300_J1, "MSM8x25 Y300_J1 BOARD")
 	.atag_offset    = PHYS_OFFSET + 0x100,
 	.map_io         = msm8625_map_io,
 	.reserve        = msm8625_reserve,

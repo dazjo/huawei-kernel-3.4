@@ -504,12 +504,10 @@ static long l3g4200d_ioctl(struct file *file,
 		/* self-test flowchart update*/
 		hrtimer_cancel(&gyro->timer);
 		memset(&sensor_data, 0, sizeof(sensor_data));
-	 	err = l3g4200d_read_gyro_values(&sensor_data);
-	 	printk(KERN_ERR " before X axis: %d Y axis: %d Z axis: %d\n", sensor_data.x,sensor_data.y,sensor_data.z);
+		err = l3g4200d_read_gyro_values(&sensor_data);
 		l3g4200d_set_selftest(L3G4200D_SELFTEST_EN);
 		msleep(800);
-	 	err = l3g4200d_read_gyro_values(&sensor_data);
-	 	printk(KERN_ERR "after X axis: %d Y axis: %d Z axis: %d\n", sensor_data.x,sensor_data.y,sensor_data.z);
+		err = l3g4200d_read_gyro_values(&sensor_data);
 		if(err < 0)
 		{
 			GYRO_DBG("L3G4200D SELF-TEST read error!\n");
@@ -527,12 +525,10 @@ static long l3g4200d_ioctl(struct file *file,
 		/* self-test flowchart update*/
 		hrtimer_cancel(&gyro->timer);
 		memset(&sensor_data, 0, sizeof(sensor_data));
-	 	err = l3g4200d_read_gyro_values(&sensor_data);
-	 	printk(KERN_ERR " before X axis: %d Y axis: %d Z axis: %d\n", sensor_data.x,sensor_data.y,sensor_data.z);
+		err = l3g4200d_read_gyro_values(&sensor_data);
 		l3g4200d_set_selftest(L3G4200D_SELFTEST_EN);
 		msleep(800);
-	 	err = l3g4200d_read_gyro_values(&sensor_data);
-	 	printk(KERN_ERR "after X axis: %d Y axis: %d Z axis: %d\n", sensor_data.x,sensor_data.y,sensor_data.z);
+		err = l3g4200d_read_gyro_values(&sensor_data);
 		if(err < 0)
 		{
 			GYRO_DBG("L3G4200D SELF-TEST read error!\n");
@@ -627,16 +623,17 @@ static int l3g4200d_probe(struct i2c_client *client,
 		ret = -ENODEV;
 		goto exit;
 	}
-    platform_data = client->dev.platform_data;
-    if(platform_data->gyro_power)
-    {
+	/*gyro mate power*/
+	platform_data = client->dev.platform_data;
+	if(platform_data->gyro_power)
+	{
 		ret = platform_data->gyro_power(IC_PM_ON);
 		if( ret < 0)
-	    {
-	    	dev_err(&client->dev, "gyro power on error!\n");
-	    	goto exit;
-	    }
-    }  
+		{
+			dev_err(&client->dev, "gyro power on error!\n");
+			goto exit;
+		}
+	}  
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		ret = -ENODEV;
 		goto exit_pm_off;
@@ -756,8 +753,13 @@ static int l3g4200d_probe(struct i2c_client *client,
 #endif
 	GYRO_DBG("L3G4200D device created successfully\n");
 	gy_wq = create_singlethread_workqueue("gy_wq");
+	/* log for create workqueue fail */
 	if (!gy_wq)
-		return -ENOMEM;
+	{
+		ret = -ENOMEM;
+		printk(KERN_ERR "%s, line %d: create_singlethread_workqueue fail!\n", __func__, __LINE__);
+		goto err_gy_create_workqueue_failed;
+	}
 
 	gyro = data;
 //	hrtimer_start(&this_gs_data->timer, ktime_set(0, 500000000), HRTIMER_MODE_REL);
@@ -775,6 +777,13 @@ static int l3g4200d_probe(struct i2c_client *client,
 
 	set_sensors_list(GY_SENSOR);
 	return 0;
+/*add gyro exception process*/
+err_gy_create_workqueue_failed:
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&data->early_suspend);
+#endif
+
+	hrtimer_cancel(&data->timer);
 err_misc_device_register_failed:
 	misc_deregister(&gysensor_device);
 err_input_register_device_failed:
@@ -784,10 +793,7 @@ err_detect_failed:
 exit_kfree:
 	kfree(gyro);
 exit_pm_off:
-	if(platform_data->gyro_power)
-	{
-		platform_data->gyro_power(IC_PM_OFF);
-	}
+/*No need to power down*/
 exit:
 	return ret;
 }
@@ -886,13 +892,12 @@ static struct i2c_driver l3g4200d_driver = {
 
 static int __init l3g4200d_init(void)
 {
-	printk(KERN_INFO "L3G4200D init driver\n");
 	return i2c_add_driver(&l3g4200d_driver);
 }
 
 static void __exit l3g4200d_exit(void)
 {
-	printk(KERN_INFO "L3G4200D exit\n");
+
 	i2c_del_driver(&l3g4200d_driver);
 	if(gy_wq)
 	   destroy_workqueue(gy_wq);

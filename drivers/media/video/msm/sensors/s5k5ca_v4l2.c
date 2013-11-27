@@ -2012,65 +2012,65 @@ static struct msm_camera_i2c_reg_conf s5k5ca_recommend_settings_2[] = {
 	{0x0F12, 0x0176}, //019E  //0173 //#TVAR_wbt_pBaseCcms[70]
 	{0x0F12, 0x0094}, //0159  //012F //#TVAR_wbt_pBaseCcms[71]
 	// D50
-	{0x0F12, 0x018A}, //01C8  //#TVAR_wbt_pBaseCcms[72]
-	{0x0F12, 0xFFC9}, //FF7F  //#TVAR_wbt_pBaseCcms[73]
-	{0x0F12, 0x0005}, //FFE4  //#TVAR_wbt_pBaseCcms[74]
-	{0x0F12, 0xFF56}, //#TVAR_wbt_pBaseCcms[75]
-	{0x0F12, 0x0230}, //#TVAR_wbt_pBaseCcms[76]
-	{0x0F12, 0xFFA0}, //#TVAR_wbt_pBaseCcms[77]
-	{0x0F12, 0x0020}, //FFDF  //#TVAR_wbt_pBaseCcms[78]
-	{0x0F12, 0xFFF8}, //FFE9  //#TVAR_wbt_pBaseCcms[79]
-	{0x0F12, 0x01E0}, //01BD  //#TVAR_wbt_pBaseCcms[80]
-	{0x0F12, 0x00FF}, //011C  //#TVAR_wbt_pBaseCcms[81]
-	{0x0F12, 0x00E2}, //011B  //#TVAR_wbt_pBaseCcms[82]
-	{0x0F12, 0xFF4D}, //FF43  //#TVAR_wbt_pBaseCcms[83]
-	{0x0F12, 0x0179}, //#TVAR_wbt_pBaseCcms[84]
-	{0x0F12, 0xFF8A}, //#TVAR_wbt_pBaseCcms[85]
-	{0x0F12, 0x0180}, //#TVAR_wbt_pBaseCcms[86]
-	{0x0F12, 0xFEC2}, //#TVAR_wbt_pBaseCcms[87]
-	{0x0F12, 0x0176}, //#TVAR_wbt_pBaseCcms[88]
-	{0x0F12, 0x0094}, //#TVAR_wbt_pBaseCcms[89]
+	{0x0F12, 0x01CE},//01B1  //#TVAR_wbt_pBaseCcms[72]
+	{0x0F12, 0xFFB6},//FFBC  //#TVAR_wbt_pBaseCcms[73]
+	{0x0F12, 0xFFE4},//FFF3  //#TVAR_wbt_pBaseCcms[74]
+	{0x0F12, 0xFF0C},//FF2D  //#TVAR_wbt_pBaseCcms[75]
+	{0x0F12, 0x0296},//026C  //#TVAR_wbt_pBaseCcms[76]
+	{0x0F12, 0xFF94},//FF96  //#TVAR_wbt_pBaseCcms[77]
+	{0x0F12, 0x0018},//0019  //#TVAR_wbt_pBaseCcms[78]
+	{0x0F12, 0xFFC9},//FFDE  //#TVAR_wbt_pBaseCcms[79]
+	{0x0F12, 0x0227},//0209  //#TVAR_wbt_pBaseCcms[80]
+	{0x0F12, 0x0118},//010F  //#TVAR_wbt_pBaseCcms[81]
+	{0x0F12, 0x0111},//00FB  //#TVAR_wbt_pBaseCcms[82]
+	{0x0F12, 0xFF15},//FF2C  //#TVAR_wbt_pBaseCcms[83]
+	{0x0F12, 0x01B2},//0198  //#TVAR_wbt_pBaseCcms[84]
+	{0x0F12, 0xFF48},//FF63  //#TVAR_wbt_pBaseCcms[85]
+	{0x0F12, 0x019A},//0191  //#TVAR_wbt_pBaseCcms[86]
+	{0x0F12, 0xFE6E},//FE91  //#TVAR_wbt_pBaseCcms[87]
+	{0x0F12, 0x01AF},//0198  //#TVAR_wbt_pBaseCcms[88]
+	{0x0F12, 0x00A9},//00AC  //#TVAR_wbt_pBaseCcms[89]
 	//  D65
-	{0x0F12, 0x018A}, //01DC  //01C8 //#TVAR_wbt_pBaseCcms[90]
-	{0x0F12, 0xFFC9}, //FF76  //FF7F //#TVAR_wbt_pBaseCcms[91]
-	{0x0F12, 0x0005}, //FFE0  //FFE4 //#TVAR_wbt_pBaseCcms[92]
-	{0x0F12, 0xFF56}, //FF4F  //#TVAR_wbt_pBaseCcms[93]
-	{0x0F12, 0x0230}, //01F5  //#TVAR_wbt_pBaseCcms[94]
-	{0x0F12, 0xFFA0}, //FF77  //#TVAR_wbt_pBaseCcms[95]
-	{0x0F12, 0x0020}, //FFCA  //FFDF //#TVAR_wbt_pBaseCcms[96]
-	{0x0F12, 0xFFF8}, //FFD5  //FFE9 //#TVAR_wbt_pBaseCcms[97]
-	{0x0F12, 0x01E0}, //01EC  //01BD //#TVAR_wbt_pBaseCcms[98]
-	{0x0F12, 0x00FF}, //0126  //011C //#TVAR_wbt_pBaseCcms[99]
-	{0x0F12, 0x00E2}, //0125  //011B //#TVAR_wbt_pBaseCcms[100]
-	{0x0F12, 0xFF4D}, //FF35  //FF43 //#TVAR_wbt_pBaseCcms[101]
-	{0x0F12, 0x0179}, //01BE  //#TVAR_wbt_pBaseCcms[102]
-	{0x0F12, 0xFF8A}, //FF44  //#TVAR_wbt_pBaseCcms[103]
-	{0x0F12, 0x0180}, //013E  //#TVAR_wbt_pBaseCcms[104]
-	{0x0F12, 0xFEC2}, //FF2E  //#TVAR_wbt_pBaseCcms[105]
-	{0x0F12, 0x0176}, //01C0  //#TVAR_wbt_pBaseCcms[106]
-	{0x0F12, 0x0094}, //011C  //#TVAR_wbt_pBaseCcms[107]
+	{0x0F12, 0x01A4},//01B1  //#TVAR_wbt_pBaseCcms[72]
+	{0x0F12, 0xFFC4},//FFBC  //#TVAR_wbt_pBaseCcms[73]
+	{0x0F12, 0xFFF8},//FFF3  //#TVAR_wbt_pBaseCcms[74]
+	{0x0F12, 0xFF39},//FF2D  //#TVAR_wbt_pBaseCcms[75]
+	{0x0F12, 0x0257},//026C  //#TVAR_wbt_pBaseCcms[76]
+	{0x0F12, 0xFF9E},//FF96  //#TVAR_wbt_pBaseCcms[77]
+	{0x0F12, 0x001F},//0019  //#TVAR_wbt_pBaseCcms[78]
+	{0x0F12, 0xFFE6},//FFDE  //#TVAR_wbt_pBaseCcms[79]
+	{0x0F12, 0x01FB},//0209  //#TVAR_wbt_pBaseCcms[80]
+	{0x0F12, 0x0108},//010F  //#TVAR_wbt_pBaseCcms[81]
+	{0x0F12, 0x00F5},//00FB  //#TVAR_wbt_pBaseCcms[82]
+	{0x0F12, 0xFF39},//FF2C  //#TVAR_wbt_pBaseCcms[83]
+	{0x0F12, 0x0190},//0198  //#TVAR_wbt_pBaseCcms[84]
+	{0x0F12, 0xFF72},//FF63  //#TVAR_wbt_pBaseCcms[85]
+	{0x0F12, 0x0189},//0191  //#TVAR_wbt_pBaseCcms[86]
+	{0x0F12, 0xFEA2},//FE91  //#TVAR_wbt_pBaseCcms[87]
+	{0x0F12, 0x018B},//0198  //#TVAR_wbt_pBaseCcms[88]
+	{0x0F12, 0x00A8},//00AC  //#TVAR_wbt_pBaseCcms[89]
 	{0x002A, 0x06A0}, // Outdoor CCM address // 7000_3380
 	{0x0F12, 0x3380},
 	{0x0F12, 0x7000},
 	{0x002A, 0x3380}, // Outdoor CCM
-	{0x0F12, 0x01B9}, //#TVAR_wbt_pOutdoorCcm[0]
-	{0x0F12, 0xFF92}, //#TVAR_wbt_pOutdoorCcm[1]
-	{0x0F12, 0xFFBC}, //#TVAR_wbt_pOutdoorCcm[2]
-	{0x0F12, 0xFF1B}, //#TVAR_wbt_pOutdoorCcm[3]
-	{0x0F12, 0x024B}, //#TVAR_wbt_pOutdoorCcm[4]
-	{0x0F12, 0xFEDF}, //#TVAR_wbt_pOutdoorCcm[5]
-	{0x0F12, 0xFFB9}, //#TVAR_wbt_pOutdoorCcm[6]
-	{0x0F12, 0xFFDB}, //#TVAR_wbt_pOutdoorCcm[7]
-	{0x0F12, 0x01FD}, //#TVAR_wbt_pOutdoorCcm[8]
-	{0x0F12, 0x0091}, //#TVAR_wbt_pOutdoorCcm[9]
-	{0x0F12, 0x00DC}, //#TVAR_wbt_pOutdoorCcm[10]
-	{0x0F12, 0xFF18}, //#TVAR_wbt_pOutdoorCcm[11]
-	{0x0F12, 0x016C}, //#TVAR_wbt_pOutdoorCcm[12]
-	{0x0F12, 0xFF54}, //#TVAR_wbt_pOutdoorCcm[13]
-	{0x0F12, 0x01FC}, //#TVAR_wbt_pOutdoorCcm[14]
-	{0x0F12, 0xFF82}, //#TVAR_wbt_pOutdoorCcm[15]
-	{0x0F12, 0x015D}, //#TVAR_wbt_pOutdoorCcm[16]
-	{0x0F12, 0x00FD}, //#TVAR_wbt_pOutdoorCcm[17]
+	{0x0F12, 0x01EF}, //#TVAR_wbt_pOutdoorCcm[0]
+	{0x0F12, 0xFF8A}, //#TVAR_wbt_pOutdoorCcm[1]
+	{0x0F12, 0xFFBA}, //#TVAR_wbt_pOutdoorCcm[2]
+	{0x0F12, 0xFF39}, //#TVAR_wbt_pOutdoorCcm[3]
+	{0x0F12, 0x020D}, //#TVAR_wbt_pOutdoorCcm[4]
+	{0x0F12, 0xFF02}, //#TVAR_wbt_pOutdoorCcm[5]
+	{0x0F12, 0xFFBF}, //#TVAR_wbt_pOutdoorCcm[6]
+	{0x0F12, 0xFFE2}, //#TVAR_wbt_pOutdoorCcm[7]
+	{0x0F12, 0x01F7}, //#TVAR_wbt_pOutdoorCcm[8]
+	{0x0F12, 0x0132}, //#TVAR_wbt_pOutdoorCcm[9]
+	{0x0F12, 0x0113}, //#TVAR_wbt_pOutdoorCcm[10]
+	{0x0F12, 0xFF2E}, //#TVAR_wbt_pOutdoorCcm[11]
+	{0x0F12, 0x0171}, //#TVAR_wbt_pOutdoorCcm[12]
+	{0x0F12, 0xFF4A}, //#TVAR_wbt_pOutdoorCcm[13]
+	{0x0F12, 0x0209}, //#TVAR_wbt_pOutdoorCcm[14]
+	{0x0F12, 0xFF51}, //#TVAR_wbt_pOutdoorCcm[15]
+	{0x0F12, 0x016F}, //#TVAR_wbt_pOutdoorCcm[16]
+	{0x0F12, 0x0119}, //#TVAR_wbt_pOutdoorCcm[17]
 	//White balance
 	//AWB Rgain initial value
 	//{0x002A   0E44//
@@ -2652,7 +2652,7 @@ static struct msm_camera_i2c_reg_conf s5k5ca_recommend_settings_2[] = {
 	{0x0F12, 0x0003}, //70000962 //TVAR_afit_pBaseValS[207] /AFIT8_demsharpmix1_iNarrFiltReduce_sBin [7:0]
 	{0x0F12, 0x0000}, //70000964 //TVAR_afit_pBaseValS[208] /AFIT16_BRIGHTNESS
 	{0x0F12, 0x0000}, //70000966 //TVAR_afit_pBaseValS[209] /AFIT16_CONTRAST
-	{0x0F12, 0x0014}, //70000968 //TVAR_afit_pBaseValS[210] /AFIT16_SATURATION
+	{0x0F12, 0x0026}, //70000968 //TVAR_afit_pBaseValS[210] /AFIT16_SATURATION
 	{0x0F12, 0x0000}, //7000096A //TVAR_afit_pBaseValS[211] /AFIT16_SHARP_BLUR
 	{0x0F12, 0x0000}, //7000096C //TVAR_afit_pBaseValS[212] /AFIT16_GLAMOUR
 	{0x0F12, 0x00C4}, //7000096E //TVAR_afit_pBaseValS[213] /AFIT16_sddd8a_edge_high
@@ -2756,7 +2756,7 @@ static struct msm_camera_i2c_reg_conf s5k5ca_recommend_settings_2[] = {
 	{0x0F12, 0x0003}, //70000A32 //TVAR_afit_pBaseValS[311] /AFIT8_demsharpmix1_iNarrFiltReduce_sBin [7:0]
 	{0x0F12, 0x0000}, //70000A34 //TVAR_afit_pBaseValS[312] /AFIT16_BRIGHTNESS
 	{0x0F12, 0x0000}, //70000A36 //TVAR_afit_pBaseValS[313] /AFIT16_CONTRAST
-	{0x0F12, 0x0019}, //70000A38 //TVAR_afit_pBaseValS[314] /AFIT16_SATURATION
+	{0x0F12, 0x0026}, //70000A38 //TVAR_afit_pBaseValS[314] /AFIT16_SATURATION
 	{0x0F12, 0x0000}, //70000A3A //TVAR_afit_pBaseValS[315] /AFIT16_SHARP_BLUR
 	{0x0F12, 0x0000}, //70000A3C //TVAR_afit_pBaseValS[316] /AFIT16_GLAMOUR
 	{0x0F12, 0x00C4}, //70000A3E //TVAR_afit_pBaseValS[317] /AFIT16_sddd8a_edge_high
@@ -2860,7 +2860,7 @@ static struct msm_camera_i2c_reg_conf s5k5ca_recommend_settings_2[] = {
 	{0x0F12, 0x0003}, //70000B02 //TVAR_afit_pBaseValS[415] /AFIT8_demsharpmix1_iNarrFiltReduce_sBin [7:0]
 	{0x0F12, 0x0000}, //70000B04 //TVAR_afit_pBaseValS[416] /AFIT16_BRIGHTNESS
 	{0x0F12, 0x0000}, //70000B06 //TVAR_afit_pBaseValS[417] /AFIT16_CONTRAST
-	{0x0F12, 0x0019}, //70000B08 //TVAR_afit_pBaseValS[418] /AFIT16_SATURATION
+	{0x0F12, 0x0026}, //70000B08 //TVAR_afit_pBaseValS[418] /AFIT16_SATURATION
 	{0x0F12, 0x0000}, //70000B0A //TVAR_afit_pBaseValS[419] /AFIT16_SHARP_BLUR
 	{0x0F12, 0x0000}, //70000B0C //TVAR_afit_pBaseValS[420] /AFIT16_GLAMOUR
 	{0x0F12, 0x00C4}, //70000B0E //TVAR_afit_pBaseValS[421] /AFIT16_sddd8a_edge_high
@@ -3682,6 +3682,7 @@ int32_t s5k5ca_write_init_settings(struct msm_sensor_ctrl_t *s_ctrl)
 
 	return rc;
 }
+
 static const struct i2c_device_id s5k5ca_i2c_id[] = {
 	{SENSOR_NAME, (kernel_ulong_t)&s5k5ca_s_ctrl},
 	{ }
