@@ -114,6 +114,10 @@
 #define H867G_WINDOW 221
 #define H881C_WAVE 84
 #define H881C_WINDOW 216
+#define Y301_A1_WAVE 135
+#define Y301_A1_WINDOW 170
+#define Y300J1_WINDOW 312
+#define Y300J1_WAVE 133
 /* delete this part */
 
 static uint16_t lsensor_adc_table_u8655[LSENSOR_MAX_LEVEL] = {
@@ -169,5 +173,8 @@ static uint16_t lsensor_adc_table_H867G[LSENSOR_MAX_LEVEL] = {
 };
 static uint16_t lsensor_adc_table_h881c[LSENSOR_MAX_LEVEL] = {
 	26, 90, 250, 555, 800, 1025, 2000
+};
+static uint16_t lsensor_adc_table_Y300J1[LSENSOR_MAX_LEVEL] = {
+	12, 40, 420, 760, 980, 1500, 3200
 };
 #endif /* _LINUX_APS_9900_H */

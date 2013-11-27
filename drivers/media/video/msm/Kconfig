@@ -362,6 +362,12 @@ config HUAWEI_FEATURE_TPS61310
 	default n
 	help
 	  tps61310 LED camera flash and video light
+config HUAWEI_FEATURE_LM3642
+	tristate "LM3642"
+	depends on HUAWEI_KERNEL
+	default n
+	help
+	  lm3642 LED camera flash and video light
 config HW_TORCH
 	bool "HUAWEI torch support"
 	depends on MSM_CAMERA_FLASH

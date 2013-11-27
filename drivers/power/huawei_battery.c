@@ -73,6 +73,7 @@
 #ifdef CONFIG_HUAWEI_KERNEL
 #define BATTERY_READ_ID_PROC  124 
 #define CHARGE_LIMIT_CURRENT_PROC 125 //rpc for limit current
+#define CHARGE_ENABLE_PROC	126
 #define BATTERY_GET_RESISTANCE_ID_PROC 127
 #endif
 #ifdef CONFIG_HUAWEI_KERNEL 
@@ -137,6 +138,7 @@ module_param_named(debug_mask, batt_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 static int msm_batt_set_delta(u32 batt_delta);
 #ifdef CONFIG_HUAWEI_KERNEL 
 static int msm_batt_set_chg_limit_current(u32 chg_limit_curent);
+static int msm_batt_set_charge_enable(u32 on);
 #endif
 /*get battery level rpc function id*/
 /*  delete for the 7x27a and  8x55  use the same code in  hardware_self_adapt.h  */
@@ -150,6 +152,7 @@ enum {
 #ifdef CONFIG_HUAWEI_KERNEL 
     BATTERY_SETDELTA_SUCCESSFUL = BATTERY_REGISTRATION_SUCCESSFUL,
     BATTERY_LIMITCURRENT_SUCCESSFUL = BATTERY_REGISTRATION_SUCCESSFUL,
+	BATTERY_CHARGE_ENABLE_SUCCESSFUL = BATTERY_REGISTRATION_SUCCESSFUL,
 #endif
     BATTERY_CLIENT_TABLE_FULL = 1,
 	BATTERY_REG_PARAMS_WRONG = 2,
@@ -317,6 +320,7 @@ struct msm_battery_info {
 	u32 vbatt_modify_reply_avail;
 #ifdef CONFIG_HUAWEI_KERNEL 
 	u32 chg_lim_current ;
+	u32 charge_enable;
 #endif
 	struct early_suspend early_suspend;
 };
@@ -336,6 +340,7 @@ static struct msm_battery_info msm_batt_info = {
 	.vbatt_modify_reply_avail = 0,
 #ifdef CONFIG_HUAWEI_KERNEL 
 	.chg_lim_current = 1250 ,
+	.charge_enable = 1
 #endif
 };
 
@@ -507,9 +512,32 @@ static ssize_t chg_limit_current_store_attrs(struct device *dev,
 	printk("chg_lim_current = %d\n",msm_batt_info.chg_lim_current);
 	return count;
 }
+
+static int chg_charge_enable_show_attrs(struct device *dev,
+			       struct device_attribute *attr,
+			       char *buf)
+{
+    int len = 0;
+    len = sprintf(buf, "%d\n", msm_batt_info.charge_enable);
+    return len;
+}
+
+static ssize_t chg_charge_enable_store_attrs(struct device *dev,
+					      struct device_attribute *attr,
+					      const char *buf, size_t count)
+{
+	msm_batt_info.charge_enable = (u32)atoi(buf);
+	msm_batt_set_charge_enable(msm_batt_info.charge_enable);
+	printk("charge_enable = %d\n",msm_batt_info.charge_enable);
+	return count;
+}
+
 static DEVICE_ATTR(chg_limit_current, S_IRUSR|S_IWUSR, chg_limit_current_show_attrs, chg_limit_current_store_attrs);
+static DEVICE_ATTR(charge_enable, S_IRUSR|S_IWUSR, chg_charge_enable_show_attrs, chg_charge_enable_store_attrs);
+
 static struct attribute *battery_attributes[] = {
 	&dev_attr_chg_limit_current.attr,
+	&dev_attr_charge_enable.attr,
 	NULL,
 };
 static struct attribute_group battery_attr_group = {
@@ -1704,6 +1732,35 @@ static int msm_batt_set_chg_limit_current(u32 chg_limit_curent)
 
 	return 0;
 }
+
+static int msm_batt_set_charge_enable(u32 on)
+{
+	int rc;
+	struct msm_set_chg_req req;
+	struct msm_set_chg_rep rep;
+
+	req.chg_limit_curent = on;
+
+	rc = msm_rpc_client_req(msm_batt_info.batt_client,
+			CHARGE_ENABLE_PROC,
+			msm_set_chg_arg_func, &req,
+			msm_set_chg_ret_func, &rep,
+			msecs_to_jiffies(BATT_RPC_TIMEOUT));
+
+	if (rc < 0) {
+		pr_err("%s: FAIL: set chg enable. rc=%d\n", __func__, rc);
+		return rc;
+	}
+
+	if (rep.chg_result != BATTERY_CHARGE_ENABLE_SUCCESSFUL) {
+		pr_err("%s: set chg enable. error=%d",
+		       __func__, rep.chg_result);
+		return -EIO;
+	}
+
+	return 0;
+}
+
 #endif
 #ifndef CONFIG_HUAWEI_NO_BATT_ID_RPC
 /* rpc data struct for battery manufacturer id */

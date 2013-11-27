@@ -189,7 +189,7 @@ static void vibrator_enable(struct timed_output_dev *dev, int value)
 		pmic_vibrator_off(NULL);
 	}
 	else {
-		value = (value > 15000 ? 15000 : value);
+		value = (value > 600000 ? 600000 : value);
 		value = (value < VIBRATOR_MIN ? VIBRATOR_MIN : value);
 		time_value = value;
 		//timed_vibrator_on(dev);

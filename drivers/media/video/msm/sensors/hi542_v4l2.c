@@ -46,7 +46,7 @@ static struct msm_camera_i2c_reg_conf hi542_prev_settings[] = {
 	//{0x0042,0x00},
 	//{0x0043,0x14},
 	
-	{0x0500, 0x19},// 1B}, LSC OFF
+	{0x0500, 0x1b},// 1B}, LSC ON
 	
 	{0x0630, 0x05},
 	{0x0631, 0x18},//08},
@@ -62,7 +62,7 @@ static struct msm_camera_i2c_reg_conf hi542_snap_settings[] = {
 	{0x0034, 0x07},
 	{0x0035, 0xA8},
 
-	{0x0500, 0x11}, //13}, LSC OFF
+	{0x0500, 0x13}, //13}, LSC ON
 
 	{0x0630, 0x0A},
 	{0x0631, 0x30},
@@ -489,7 +489,7 @@ static struct msm_camera_i2c_reg_conf hi542_recommend_settings[] = {
 	{0x074B,0xB1},/*man_spec_edof_ctrl_edof_fw_spare_0 Gain x7*/
 
 	
-	{0x0500,0x19},//1b LSC disable
+	{0x0500,0x1b},//1b LSC enable
 	{0x0510,0x10},/*man_spec_edof_ctrl_edof_fw_spare_0 Gain x7*/
 	
 	
@@ -535,6 +535,17 @@ static struct msm_camera_i2c_reg_conf hi542_recommend_settings[] = {
 	{0x0631,0x18},// jk 08/*man_spec_edof_ctrl_edof_fw_spare_0 Gain x7*/
 	{0x0632,0x03},/*man_spec_edof_ctrl_edof_fw_spare_0 Gain x7*/
 	{0x0633,0xd4},//jk c8},/*man_spec_edof_ctrl_edof_fw_spare_0 Gain x7*/
+	//LSC
+	{0x0540, 0x10}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
+	{0x0541, 0x1f}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
+	{0x0550, 0x80}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
+	{0x0551, 0x80}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
+	{0x0552, 0x80}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
+	{0x0553, 0x80}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
+	{0x0554, 0x52}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
+	{0x0555, 0x52}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
+	{0x0556, 0x52}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
+	{0x0571, 0x60}, //60}, /* man_spec_edof_ctrl_edof_fw_spare_0 Gain x7 */
 	{0x0663,0x05},//0a}, trail time/*man_spec_edof_ctrl_edof_fw_spare_0 Gain x7*/
 	{0x0660,0x03},/*man_spec_edof_ctrl_edof_fw_spare_0 Gain x7*/
 

@@ -51,6 +51,14 @@
 #include <asm-arm/huawei/usb_switch_huawei.h>
 #endif  /* CONFIG_HUAWEI_KERNEL */
 
+#ifdef CONFIG_HUAWEI_KERNEL
+#ifdef CONFIG_HUAWEI_POWER_DOWN_CHARGE
+#include <linux/hardware_self_adapt.h>
+#define POWER_OFF_CHARGE    1
+#define LED_CHECK_PERIOD        (3*HZ)
+static unsigned int charge_flag = 0; //poweroff charge flag
+#endif
+#endif
 static const char driver_name[] = "msm72k_udc";
 
 /* #define DEBUG */
@@ -1686,11 +1694,26 @@ static void usb_do_work(struct work_struct *w)
 				usb_do_work_check_vbus(ui);
 				pm_runtime_put_noidle(&ui->pdev->dev);
 				pm_runtime_suspend(&ui->pdev->dev);
-				wake_unlock(&ui->wlock);
 #ifdef CONFIG_HUAWEI_KERNEL
-				wake_unlock(&charger_wlock);				
-				printk(KERN_ERR "%s:unlock charger_wlock\n",__func__);
-#endif
+#ifdef CONFIG_HUAWEI_POWER_DOWN_CHARGE
+				if( POWER_OFF_CHARGE == charge_flag )
+				{
+					/* realse the wakelock after 3 second in order 
+					 * to set the led off in power off charging
+					 */
+					wake_lock_timeout(&ui->wlock, LED_CHECK_PERIOD);
+					wake_lock_timeout(&charger_wlock, LED_CHECK_PERIOD);	
+				}
+				else
+#endif		
+				{
+					wake_unlock(&ui->wlock);
+					wake_unlock(&charger_wlock);				
+					printk(KERN_ERR "%s:unlock charger_wlock\n",__func__);
+				}
+#else
+			wake_unlock(&ui->wlock);
+#endif		
 				break;
 			}
 			if (flags & USB_FLAG_SUSPEND) {
@@ -2803,6 +2826,13 @@ static int msm72k_probe(struct platform_device *pdev)
 	struct usb_info *ui;
 	struct msm_otg *otg;
 	int retval;
+
+#ifdef CONFIG_HUAWEI_KERNEL
+#ifdef CONFIG_HUAWEI_POWER_DOWN_CHARGE
+	/*get power off charge flag*/
+	charge_flag = get_charge_flag();
+#endif
+#endif
 
 	dev_dbg(&pdev->dev, "msm72k_probe\n");
 	ui = kzalloc(sizeof(struct usb_info), GFP_KERNEL);

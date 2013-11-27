@@ -63,6 +63,12 @@
 
 #include "msm_serial_hs_hwreg.h"
 
+#ifdef CONFIG_HUAWEI_KERNEL
+#include <linux/hardware_self_adapt.h>
+#ifdef CONFIG_HUAWEI_POWER_DOWN_CHARGE
+#define POWER_OFF_CHARGE 1
+#endif
+#endif
 static int hs_serial_debug_mask = 1;
 module_param_named(debug_mask, hs_serial_debug_mask,
 		   int, S_IRUGO | S_IWUSR | S_IWGRP);
@@ -168,6 +174,7 @@ struct msm_hs_port {
 	struct work_struct clock_off_w; /* work for actual clock off */
 	struct workqueue_struct *hsuart_wq; /* hsuart workqueue */
 	struct mutex clk_mutex; /* mutex to guard against clock off/clock on */
+    /*delete*/
 };
 
 #define MSM_UARTDM_BURST_SIZE 16   /* DM burst size (in bytes) */
@@ -1241,6 +1248,7 @@ static void msm_hs_enable_ms_locked(struct uart_port *uport)
 
 }
 
+/*delete*/
 /*
  *  Standard API, Break Signal
  *
@@ -1887,6 +1895,22 @@ static int __devinit msm_hs_probe(struct platform_device *pdev)
 	struct msm_hs_port *msm_uport;
 	struct resource *resource;
 	struct msm_serial_hs_platform_data *pdata = pdev->dev.platform_data;
+    
+#ifdef CONFIG_HUAWEI_KERNEL
+#ifdef CONFIG_HUAWEI_POWER_DOWN_CHARGE
+	static unsigned int charge_flag = 0; //poweroff charge flag
+
+	charge_flag = get_charge_flag();
+	/*if device in power-off charge, return directly
+	 *it used to release wake_lock msm_serial_hs_dma
+	 */
+	if( POWER_OFF_CHARGE == charge_flag )
+	{
+		printk("release msm_hs during power off charge!\n");
+		return 0;
+	}
+#endif
+#endif
 
 	if (pdev->id < 0 || pdev->id >= UARTDM_NR) {
 		printk(KERN_ERR "Invalid plaform device ID = %d\n", pdev->id);
@@ -2209,6 +2233,7 @@ static struct uart_ops msm_hs_ops = {
 	.config_port = msm_hs_config_port,
 	.release_port = msm_hs_release_port,
 	.request_port = msm_hs_request_port,
+    /*delete*/
 };
 
 module_init(msm_serial_hs_init);

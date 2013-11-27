@@ -155,7 +155,7 @@ enum {
 #define FILTER_SAMPLE_NUMBER	256		/* 256 = 1g */
 #define	GPIO_INT1		19
 #define GPIO_INT2		20
-#define GS_ST_TIMRER		(1000)		/*1000ms*/
+#define GS_ST_TIMRER		(1000*1000000)		/*1000000s*/
 
 #define ECS_IOCTL_READ_ACCEL_XYZ			_IOR(0xA1, 0x06, char[3])
 #define ECS_IOCTL_APP_SET_DELAY 			_IOW(0xA1, 0x18, short)
@@ -188,7 +188,7 @@ struct input_dev *sensor_dev = NULL;
 static int accel_delay = GS_ST_TIMRER;     /*1s*/
 
 static atomic_t a_flag;
-
+static atomic_t adi_status_flag;
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void gs_early_suspend(struct early_suspend *h);
 static void gs_late_resume(struct early_suspend *h);
@@ -198,9 +198,9 @@ static int adi346_debug_mask;
 module_param_named(adi346_debug, adi346_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define ADI346_DBG(x...) do {\
-    if (adi346_debug_mask) \
-        printk(KERN_DEBUG x);\
-    } while (0)
+	if (adi346_debug_mask) \
+		printk(KERN_DEBUG x);\
+	} while (0)
 #define adi346_PRINT_PER_TIMES 100
 unsigned int adi346_times = 0;
 
@@ -241,33 +241,32 @@ static int adxl34x_i2c_read_block(struct i2c_client *client,
 /**************************************************************************************/
 static inline int reg_read(struct gs_data *gs , int reg)
 {
-    int val;
+	int val;
 
-    mutex_lock(&gs->mlock);
+	mutex_lock(&gs->mlock);
 
-    val = i2c_smbus_read_byte_data(gs->client, reg);
-    if (val < 0)
-    {
-        printk(KERN_ERR "ADI346 chip i2c %s failed! reg=0x%x, value=0x%x\n", __FUNCTION__, reg, val);
-    }
-    
-    mutex_unlock(&gs->mlock);
+	val = i2c_smbus_read_byte_data(gs->client, reg);
+	if (val < 0)
+	{
+		printk(KERN_ERR "ADI346 chip i2c %s failed! reg=0x%x, value=0x%x\n", __FUNCTION__, reg, val);
+	}
+	mutex_unlock(&gs->mlock);
 
-    return val;
+	return val;
 }
 static inline int reg_write(struct gs_data *gs, int reg, uint8_t val)
 {
-    int ret;
+	int ret;
 
-    mutex_lock(&gs->mlock);
-    ret = i2c_smbus_write_byte_data(gs->client, reg, val);
-    if(ret < 0)
-    {
-        printk(KERN_ERR "ADI346 chip i2c %s failed! reg=0x%x, value=0x%x, ret=%d\n", __FUNCTION__, reg, val, ret);
-    }
-    mutex_unlock(&gs->mlock);
+	mutex_lock(&gs->mlock);
+	ret = i2c_smbus_write_byte_data(gs->client, reg, val);
+	if(ret < 0)
+	{
+		printk(KERN_ERR "ADI346 chip i2c %s failed! reg=0x%x, value=0x%x, ret=%d\n", __FUNCTION__, reg, val, ret);
+	}
+	mutex_unlock(&gs->mlock);
 
-    return ret;
+	return ret;
 }
 
 /**************************************************************************************/
@@ -322,7 +321,7 @@ static int gs_st_open(struct inode *inode, struct file *file)
 	reg_write(this_gs_data,GS_ADI_REG_BW,0x0b);    /* Rate: 200Hz, IDD: 130uA */
 	reg_write(this_gs_data,GS_ADI_REG_DATA_FORMAT,0x0B);/* Data Format: 16g right justified  256=1g*/
 	reg_write(this_gs_data, GS_ADI_REG_POWER_CTL, 0x08);  
-
+	atomic_set(&adi_status_flag, GS_RESUME);
 	if (this_gs_data->use_irq)
 		enable_irq(this_gs_data->client->irq);
 	else
@@ -335,8 +334,7 @@ static int gs_st_release(struct inode *inode, struct file *file)
 {
 	/*gs standby mode*/
 	reg_write(this_gs_data, GS_ADI_REG_POWER_CTL, 0);
-	
-
+	atomic_set(&adi_status_flag, GS_SUSPEND);
 	if (this_gs_data->use_irq)
 		disable_irq(this_gs_data->client->irq);
 	else
@@ -522,11 +520,9 @@ static void gs_work_func(struct work_struct *work)
     }
     else
     {
-        /* hrtimer_start fail */
-        if (0 != hrtimer_start(&gs->timer, ktime_set(sesc, nsesc), HRTIMER_MODE_REL) )
-        {
-            printk(KERN_ERR "%s, line %d: hrtimer_start fail! sec=%d, nsec=%d\n", __func__, __LINE__, sesc, nsesc);
-        }
+        if(GS_RESUME == atomic_read(&adi_status_flag))
+            if (0 != hrtimer_start(&gs->timer, ktime_set(sesc, nsesc), HRTIMER_MODE_REL) )
+                printk(KERN_ERR "%s, line %d: hrtimer_start fail! sec=%d, nsec=%d\n", __func__, __LINE__, sesc, nsesc);
     }
 }
 
@@ -557,7 +553,7 @@ static int gs_config_int_pin(void)
 	{
 		printk(KERN_ERR "gpio_request failed for st gs int\n");
 		return -1;
-	}	
+	}
 
 	err = gpio_configure(GPIO_INT1, GPIOF_INPUT | IRQF_TRIGGER_HIGH);
 	if (err) 
@@ -565,7 +561,7 @@ static int gs_config_int_pin(void)
 		gpio_free(GPIO_INT1);
 		printk(KERN_ERR "gpio_config failed for gs int HIGH\n");
 		return -1;
-	}     
+	}
 
 	return 0;
 }
@@ -584,7 +580,6 @@ static int gs_probe(
 	unsigned char revid;
 	struct gs_platform_data *pdata = NULL;
 	/*delete 20 lines*/
-	    
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		printk(KERN_ERR "gs_adi346_probe: need I2C_FUNC_I2C\n");
 		ret = -ENODEV;
@@ -602,24 +597,10 @@ static int gs_probe(
 			}
 		}
 #endif
-				
-		if(pdata->adapt_fn != NULL){
-			ret = pdata->adapt_fn();
-			if(ret > 0){
-				client->addr = pdata->slave_addr;//actual address
-				printk(KERN_INFO "%s:change i2c addr to actrual address = %d\n", __FUNCTION__, pdata->slave_addr);
-				if(client->addr == 0){
-					printk(KERN_ERR "%s: bad i2c address = %d\n", __FUNCTION__, client->addr);
-					ret = -EFAULT;
-					goto err_power_failed;
-				}
-			}
-		}
-		
+		/*adapt_fn is out of style,delete*/
 		if(pdata->get_compass_gs_position != NULL){
 			compass_gs_position=pdata->get_compass_gs_position();
 		}
-			
 
 		if(pdata->init_flag != NULL){
 			if(*(pdata->init_flag)){
@@ -652,14 +633,11 @@ static int gs_probe(
 
 	revid=reg_read(gs,GS_ADI_REG_DEVID);
 
-	printk(KERN_INFO "%s:     %d     revid===%d\n",__func__,__LINE__,revid);
-
 	switch (revid) {
 	case ID_ADXL346:
 		model = 346;
 		break;
 	default:
-		printk(KERN_ERR "Failed to probe \n" );
 		goto err_detect_failed;
 	}
 
@@ -691,11 +669,11 @@ static int gs_probe(
 		/* fail? */
 		goto err_detect_failed;
 	}
-
-    #ifdef CONFIG_HUAWEI_HW_DEV_DCT
-    /* detect current device successful, set the flag as present */
-    set_hw_dev_flag(DEV_I2C_G_SENSOR);
-    #endif
+	atomic_set(&adi_status_flag, GS_SUSPEND);
+	#ifdef CONFIG_HUAWEI_HW_DEV_DCT
+	/* detect current device successful, set the flag as present */
+	set_hw_dev_flag(DEV_I2C_G_SENSOR);
+	#endif
 
 	if (sensor_dev == NULL)
 	{
@@ -752,8 +730,6 @@ static int gs_probe(
 	}
 #endif 
 
-	
-
 	if (!gs->use_irq) {
 		hrtimer_init(&gs->timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 		gs->timer.function = gs_timer_func;
@@ -766,40 +742,40 @@ static int gs_probe(
 	register_early_suspend(&gs->early_suspend);
 #endif
 
-    gs_wq = create_singlethread_workqueue("gs_wq");
-    if (!gs_wq)
-    {
-        ret = -ENOMEM;
-        printk(KERN_ERR "%s, line %d: create_singlethread_workqueue fail!\n", __func__, __LINE__);
-        goto err_create_workqueue_failed;
-    }
-    
-    this_gs_data = gs;
+	gs_wq = create_singlethread_workqueue("gs_wq");
+	if (!gs_wq)
+	{
+		ret = -ENOMEM;
+		printk(KERN_ERR "%s, line %d: create_singlethread_workqueue fail!\n", __func__, __LINE__);
+		goto err_create_workqueue_failed;
+	}
+	
+		this_gs_data = gs;
 
-    if(pdata && pdata->init_flag)
-        *(pdata->init_flag) = 1;
-    ret = set_sensor_input(ACC, gs->input_dev->dev.kobj.name);
-    if (ret) {
-        dev_err(&client->dev, "%s set_sensor_input failed\n", __func__);
-        goto err_create_workqueue_failed;
-    }
-    printk(KERN_INFO "gs_probe: Start adi346  in %s mode\n", gs->use_irq ? "interrupt" : "polling");
-    set_sensors_list(G_SENSOR);
-    return 0;
+	if(pdata && pdata->init_flag)
+		*(pdata->init_flag) = 1;
+	ret = set_sensor_input(ACC, gs->input_dev->dev.kobj.name);
+	if (ret) {
+		dev_err(&client->dev, "%s set_sensor_input failed\n", __func__);
+		goto err_create_workqueue_failed;
+	}
+	printk("My G-sensor is adi346\n");
+	set_sensors_list(G_SENSOR);
+	return 0;
 
 err_create_workqueue_failed:
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&gs->early_suspend);
+	unregister_early_suspend(&gs->early_suspend);
 #endif
 
-    if (gs->use_irq)
-    {
-        free_irq(client->irq, gs);
-    }
-    else
-    {
-        hrtimer_cancel(&gs->timer);
-    }
+	if (gs->use_irq)
+	{
+		free_irq(client->irq, gs);
+	}
+	else
+	{
+		hrtimer_cancel(&gs->timer);
+	}
 err_misc_device_register_failed:
 	misc_deregister(&gsensor_device);
 
@@ -813,17 +789,8 @@ err_alloc_data_failed:
 #ifndef   GS_POLLING 
 	gs_free_int();
 #endif
-/*turn down the power*/	
 err_power_failed:
-#ifdef CONFIG_ARCH_MSM7X30
-	if(pdata->gs_power != NULL){
-		pdata->gs_power(IC_PM_OFF);
-	}
-#endif
 err_check_functionality_failed:
-
-	printk(KERN_INFO "gs_probe: faile  adi346  in  mode\n");
-
 	return ret;
 }
 
@@ -831,7 +798,7 @@ static int gs_remove(struct i2c_client *client)
 {
 	struct gs_data *gs = i2c_get_clientdata(client);
 #ifdef CONFIG_HAS_EARLYSUSPEND
-    unregister_early_suspend(&gs->early_suspend);
+	unregister_early_suspend(&gs->early_suspend);
 #endif
 	if (gs->use_irq)
 		free_irq(client->irq, gs);
@@ -848,7 +815,7 @@ static int gs_suspend(struct i2c_client *client, pm_message_t mesg)
 {
 	int ret;
 	struct gs_data *gs = i2c_get_clientdata(client);
-
+	atomic_set(&adi_status_flag, GS_SUSPEND);
 	if (gs->use_irq)
 		disable_irq(client->irq);
 	else
@@ -871,7 +838,7 @@ static int gs_resume(struct i2c_client *client)
 	reg_write(this_gs_data,GS_ADI_REG_BW,0x0b);    /* Rate: 200Hz, IDD: 130uA */
 	 reg_write(this_gs_data,GS_ADI_REG_DATA_FORMAT,0x0B);/* Data Format: 16g right justified  256=1g*/
 	reg_write(this_gs_data, GS_ADI_REG_POWER_CTL, 0x08);
-	
+	atomic_set(&adi_status_flag, GS_RESUME);
 	if (!gs->use_irq)
 		hrtimer_start(&gs->timer, ktime_set(1, 0), HRTIMER_MODE_REL);
 	else

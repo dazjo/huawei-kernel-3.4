@@ -1327,12 +1327,22 @@ static struct resource msm8625_resources_sdc3[] = {
 		.end	= MSM8625_INT_SDC3_1,
 		.flags	= IORESOURCE_IRQ,
 	},
-	{
-		.name	= "sdcc_dma_chnl",
-		.start	= DMOV_NAND_CHAN,
-		.end	= DMOV_NAND_CHAN,
-		.flags	= IORESOURCE_DMA,
-	},
+    /*change DMA channel to 8*/
+#ifdef CONFIG_HUAWEI_KERNEL
+    {
+        .name   = "sdcc_dma_chnl",
+        .start  = DMOV_SDC3_CHAN,
+        .end    = DMOV_SDC3_CHAN,
+        .flags  = IORESOURCE_DMA,
+    },
+#else
+    {
+        .name   = "sdcc_dma_chnl",
+        .start  = DMOV_NAND_CHAN,
+        .end    = DMOV_NAND_CHAN,
+        .flags  = IORESOURCE_DMA,
+    },
+#endif
 	{
 		.name	= "sdcc_dma_crci",
 		.start	= DMOV_SDC3_CRCI,
@@ -1834,6 +1844,7 @@ static struct msm_cpr_config msm_cpr_pdata = {
 	.max_nom_freq = 700800,
 	.max_freq = 1401600,
 	.max_quot = 0,
+	.disable_cpr = false,
 	.vp_data = &vp_data,
 	.get_quot = msm_cpr_get_quot,
 	.clk_enable = msm_cpr_clk_enable,
@@ -1866,6 +1877,7 @@ static void __init msm_cpr_init(void)
 	}
 
 	msm_smem_get_cpr_info(cpr_info);
+	msm_cpr_pdata.disable_cpr = cpr_info->disable_cpr;
 
 	/**
 	 * Set the ring_osc based on efuse BIT(0)
@@ -1898,11 +1910,11 @@ static void __init msm_cpr_init(void)
 	 * Ditto for a 1.0GHz part.
 	 */
 	if (msm8625_cpu_id() == MSM8625A) {
-		msm_cpr_pdata.max_quot += 100;
+		msm_cpr_pdata.max_quot += 30;
 		if (msm_cpr_pdata.max_quot > 1400)
 			msm_cpr_pdata.max_quot = 1400;
 	} else if (msm8625_cpu_id() == MSM8625) {
-		msm_cpr_pdata.max_quot += 120;
+		msm_cpr_pdata.max_quot += 50;
 		if (msm_cpr_pdata.max_quot > 1350)
 			msm_cpr_pdata.max_quot = 1350;
 	}
@@ -1925,14 +1937,18 @@ static void __init msm_cpr_init(void)
 		msm_cpr_mode_data[TURBO_MODE].turbo_Vmin = 1100000;
 	}
 
-	pr_debug("%s: cpr: ring_osc: 0x%x\n", __func__,
+	pr_info("%s: cpr: ring_osc: 0x%x\n", __func__,
 		msm_cpr_mode_data[TURBO_MODE].ring_osc);
 	pr_info("%s: cpr: turbo_quot: 0x%x\n", __func__, cpr_info->turbo_quot);
 	pr_info("%s: cpr: pvs_fuse: 0x%x\n", __func__, cpr_info->pvs_fuse);
 	pr_info("%s: cpr: floor_fuse: 0x%x\n", __func__, cpr_info->floor_fuse);
-	pr_debug("%s: cpr: nom_Vmin: %d, turbo_Vmin: %d\n", __func__,
+	pr_info("%s: cpr: nom_Vmin: %d, turbo_Vmin: %d\n", __func__,
 		msm_cpr_mode_data[TURBO_MODE].nom_Vmin,
 		msm_cpr_mode_data[TURBO_MODE].turbo_Vmin);
+	pr_info("%s: cpr: nom_Vmax: %d, turbo_Vmax: %d\n", __func__,
+		msm_cpr_mode_data[TURBO_MODE].nom_Vmax,
+		msm_cpr_mode_data[TURBO_MODE].turbo_Vmax);
+
 	kfree(cpr_info);
 
 	if (msm8625_cpu_id() == MSM8625A)

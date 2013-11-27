@@ -45,7 +45,8 @@
 #define AKM8963_DEBUG_FUNC	0
 #define AKM8963_DEBUG_DATA	0
 #define MAX_FAILURE_COUNT	3
-#define AKM8963_RETRY_COUNT	10
+/*change I2C retry time from 10 to 3*/
+#define AKM8963_RETRY_COUNT 3
 #define AKM8963_DEFAULT_DELAY	100
 /*move it to hardware_self_adapt.h*/
 
@@ -839,23 +840,7 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	int gpio_config;
 	int ret = -1;
 	struct compass_platform_data *pdata = NULL;
-
-	printk(KERN_ERR "==================== akm8963_probe\n");
-
-	gpio_config = GPIO_CFG(126, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA);
-	err = gpio_tlmm_config(gpio_config, GPIO_CFG_ENABLE);
-	if (err) 
-	{
-		printk(KERN_ERR "%s: gpio_tlmm_config(126)=%d\n", __func__, err);
-	}
-
-	ret = gpio_request(126, "akm8963");
-	printk(KERN_ERR "@_@ request pin: %d\n", ret);
-	mdelay(50);
-	gpio_direction_output(126, 1);
-	ret = gpio_get_value(126);
-	printk(KERN_ERR "@_@ reset=%d\n", ret);
-
+	/*Reset function should be move download,After I2C function check*/
 	if (!i2c_check_functionality(client->adapter, I2C_FUNC_I2C)) {
 		printk(KERN_ERR "AKM8963 akm8963_probe: check_functionality failed.\n");
 		err = -ENODEV;
@@ -871,6 +856,18 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 			}
 		}
 	}
+	gpio_config = GPIO_CFG(126, 0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA);
+	err = gpio_tlmm_config(gpio_config, GPIO_CFG_ENABLE);
+	if (err) 
+	{
+		printk(KERN_ERR "%s: gpio_tlmm_config(126)=%d\n", __func__, err);
+	}
+	ret = gpio_request(126, "akm8963");
+	gpio_direction_output(126, 0);
+	mdelay(1);
+	gpio_direction_output(126, 1);
+	mdelay(1);
+	ret = gpio_get_value(126);
 	/* Allocate memory for driver data */
 	akm = kzalloc(sizeof(struct akm8963_data), GFP_KERNEL);
 	if (!akm) {
@@ -881,7 +878,7 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 
 	INIT_WORK(&akm->work, akm8963_work_func);
 	i2c_set_clientdata(client, akm);
-	printk(KERN_ERR "AKM8963 akm8963_probe: platform data is NULL\n");
+	/*delete useless log print*/
 
 	this_client = client;
 
@@ -968,27 +965,24 @@ int akm8963_probe(struct i2c_client *client, const struct i2c_device_id *id)
 	input_set_abs_params(akm->input_dev, ABS_BRAKE, -32768, 32767, 3, 3);
 	/* Set name */
 	//akm->input_dev->name = "compass";
-
-	/* Register */
-	//err = input_register_device(akm->input_dev);
-	err = 0;
+	/* Register input device,if there is no G-sensor to register this struct*/
+	/*err = input_register_device(akm->input_dev);
 	if (err) {
 		printk(KERN_ERR "AKM8963 akm8963_probe: "
-			   "Unable to register input device\n");
+				"Unable to register input device\n");
 		goto exit_input_register_fail;
-	}
-
+	}*/
 	err = misc_register(&akmd_device);
 	if (err) {
 		printk(KERN_ERR "AKM8963 akm8963_probe: "
-			   "akmd_device register failed\n");
+				"akmd_device register failed\n");
 		goto exit_akmd_device_register_failed;
 	}
 
 	err = misc_register(&akm_aot_device);
 	if (err) {
 		printk(KERN_ERR "AKM8963 akm8963_probe: "
-			   "akm_aot_device register failed\n");
+				"akm_aot_device register failed\n");
 		goto exit_akm_aot_device_register_failed;
 	}
 
@@ -1021,7 +1015,7 @@ exit_akm_aot_device_register_failed:
 	misc_deregister(&akmd_device);
 exit_akmd_device_register_failed:
 	//input_unregister_device(akm->input_dev);
-exit_input_register_fail:
+//exit_input_register_fail:
 	//input_free_device(akm->input_dev);
 exit_input_dev_alloc_failed:
 	free_irq(client->irq, akm);
@@ -1030,12 +1024,6 @@ exit_check_dev_id:
 //exit_check_platform_data:
 	kfree(akm);
 exit_alloc_data_failed:
-	/* turn down the power */
-#ifdef CONFIG_ARCH_MSM7X30
-	if(pdata->compass_power != NULL){
-		pdata->compass_power(IC_PM_OFF);
-	}
-#endif
 exit_check_functionality_failed:
 	return err;
 }
@@ -1060,9 +1048,9 @@ static const struct i2c_device_id akm8963_id[] = {
 };
 
 static struct i2c_driver akm8963_driver = {
-	.probe		= akm8963_probe,
-	.remove 	= akm8963_remove,
-	.id_table	= akm8963_id,
+	.probe      = akm8963_probe,
+	.remove     = akm8963_remove,
+	.id_table   = akm8963_id,
 	.driver = {
 		.name = AKM8963_I2C_NAME,
 	},
@@ -1070,21 +1058,19 @@ static struct i2c_driver akm8963_driver = {
 
 static int __init akm8963_init(void)
 {
-	printk("AKM8963 compass driver: initialize\n");
+	
 	return i2c_add_driver(&akm8963_driver);
 }
 
 static void __exit akm8963_exit(void)
 {
-	printk( "AKM8963 compass driver: release\n");
+	
 	i2c_del_driver(&akm8963_driver);
 }
 
 
 late_initcall(akm8963_init);
-//module_init(akm8963_init);
 module_exit(akm8963_exit);
 
-MODULE_AUTHOR("viral wang <viral_wang@htc.com>");
 MODULE_DESCRIPTION("AKM8963 compass driver");
 MODULE_LICENSE("GPL");

@@ -20,6 +20,7 @@ endif
 obj-$(CONFIG_MSM_CAMERA) += msm_axi_qos.o gemini/
 obj-$(CONFIG_MSM_CAMERA_FLASH) += flash.o
 obj-$(CONFIG_HUAWEI_FEATURE_TPS61310) += tps61310.o
+obj-$(CONFIG_HUAWEI_FEATURE_LM3642) += lm3642.o
 obj-$(CONFIG_HW_TORCH) += torch.o
 obj-$(CONFIG_ARCH_MSM_ARM11) += msm_vfe7x.o
 ifeq ($(CONFIG_MSM_CAMERA_V4L2),y)
