@@ -321,10 +321,11 @@ static struct clkctl_acpu_speed pll0_960_pll1_196_pll2_1200_pll4_1401[] = {
 };
 
 /* 8625 PLL4 @ 1008MHz with GSM capable modem */
+/* Y300-100 */
 static struct clkctl_acpu_speed pll0_960_pll1_245_pll2_1200_pll4_1008_2p0[] = {
 	{ 0, 19200, ACPU_PLL_TCXO, 0, 0, 2400, 3, 0, 30720 },
 	{ 0, 61440, ACPU_PLL_1, 1, 3,  7680, 3, 0, 61440 },
-	{ 0, 122880, ACPU_PLL_1, 1, 1,  15360, 3, 1, 61440 },
+	{ 1, 122880, ACPU_PLL_1, 1, 1,  15360, 3, 1, 61440 },
 	{ 1, 245760, ACPU_PLL_1, 1, 0, 30720, 3, 1, 61440 },
 	{ 0, 300000, ACPU_PLL_2, 2, 3, 37500, 3, 2, 122880 },
 	{ 1, 320000, ACPU_PLL_0, 4, 2, 40000, 3, 2, 122880 },
@@ -1027,7 +1028,7 @@ static void __devinit select_freq_plan(void)
 	 * are using different clock plan based reprogramming method.
 	 */
 	if (cpu_is_msm8625() &&	pll_mhz[ACPU_PLL_4] == 1008) {
-		if (pll_mhz[ACPU_PLL_2] == 245)
+		if (pll_mhz[ACPU_PLL_1] == 245)
 			acpu_freq_tbl =
 				pll0_960_pll1_245_pll2_1200_pll4_1008_2p0;
 		else
