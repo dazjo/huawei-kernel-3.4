@@ -91,7 +91,7 @@
 #ifdef CONFIG_HUAWEI_KERNEL
 #define HEALTH_HIGH_VOLT_MAX 4400 //max vlotage
 #define BATTERY_HIGH_HIGH    4450 //design max voltage
-#define CHG_LIMIT_VOLT 4350
+#define CHG_LIMIT_VOLT 4300
 #endif
 #define NO_BATT_TEMPERATURE (-30)
 
