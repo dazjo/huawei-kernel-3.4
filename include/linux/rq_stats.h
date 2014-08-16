@@ -11,21 +11,8 @@
  *
  */
 
-struct rq_data {
-	unsigned int rq_avg;
-	unsigned long rq_poll_jiffies;
-	unsigned long def_timer_jiffies;
-	unsigned long rq_poll_last_jiffy;
-	unsigned long rq_poll_total_jiffies;
-	unsigned long def_timer_last_jiffy;
-	unsigned int def_interval;
-	int64_t def_start_time;
-	struct attribute_group *attr_group;
-	struct kobject *kobj;
-	struct work_struct def_timer_work;
-	int init;
-};
+/* moved to arch/arm/mach-msm/msm_rq_stats.c */
 
-extern spinlock_t rq_lock;
-extern struct rq_data rq_info;
-extern struct workqueue_struct *rq_wq;
+#ifdef CONFIG_MSM_RUN_QUEUE_STATS
+extern void msm_update_rq_stats(void);
+#endif
