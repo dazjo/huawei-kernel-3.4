@@ -491,6 +491,10 @@ bool blk_rq_merge_ok(struct request *rq, struct bio *bio)
 	if ((bio->bi_rw & REQ_SECURE) != (rq->bio->bi_rw & REQ_SECURE))
 		return false;
 
+	/* don't merge file system requests and sanitize requests */
+	if ((bio->bi_rw & REQ_SANITIZE) != (rq->bio->bi_rw & REQ_SANITIZE))
+		return false;
+
 	/* different data direction or already started, don't merge */
 	if (bio_data_dir(bio) != rq_data_dir(rq))
 		return false;

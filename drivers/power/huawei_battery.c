@@ -89,9 +89,9 @@
 #define TEMP_MULTIPLE   10
 #define HEALTH_VOLT_MAX 4250
 #ifdef CONFIG_HUAWEI_KERNEL
-#define HEALTH_HIGH_VOLT_MAX 4400 //max vlotage
-#define BATTERY_HIGH_HIGH    4450 //design max voltage
-#define CHG_LIMIT_VOLT 4350
+#define HEALTH_HIGH_VOLT_MAX 4350 //max vlotage
+#define BATTERY_HIGH_HIGH    4350 //design max voltage
+#define CHG_LIMIT_VOLT 4300
 #endif
 #define NO_BATT_TEMPERATURE (-30)
 
@@ -107,7 +107,7 @@
 #define ONCRPC_CHG_GET_GENERAL_STATUS_PROC	12
 #define ONCRPC_CHARGER_API_VERSIONS_PROC	0xffffffff
 
-#define BATT_RPC_TIMEOUT    5000	/* 5 sec */
+#define BATT_RPC_TIMEOUT    60000	/* 5 sec */
 
 #define INVALID_BATT_HANDLE    -1
 

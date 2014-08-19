@@ -32,6 +32,68 @@
 #define DEFAULT_RQ_POLL_JIFFIES 1
 #define DEFAULT_DEF_TIMER_JIFFIES 5
 
+struct rq_data {
+	unsigned int rq_avg;
+	unsigned long rq_poll_jiffies;
+	unsigned long def_timer_jiffies;
+	unsigned long rq_poll_last_jiffy;
+	unsigned long rq_poll_total_jiffies;
+	unsigned long def_timer_last_jiffy;
+	unsigned int def_interval;
+	int64_t def_start_time;
+	struct attribute_group *attr_group;
+	struct kobject *kobj;
+	struct work_struct def_timer_work;
+	int init;
+};
+static struct rq_data rq_info;
+
+static struct workqueue_struct *rq_wq;
+static spinlock_t rq_lock;
+
+void msm_update_rq_stats(void)
+{
+	unsigned long flags, jiffy_gap;
+	unsigned int rq_avg;
+
+	if (!rq_info.init)
+		return;
+
+	jiffy_gap = jiffies - rq_info.rq_poll_last_jiffy;
+	if (jiffy_gap >= rq_info.rq_poll_jiffies) {
+
+		spin_lock_irqsave(&rq_lock, flags);
+
+		if (!rq_info.rq_avg)
+			rq_info.rq_poll_total_jiffies = 0;
+
+		rq_avg = nr_running() * 10;
+
+		if (rq_info.rq_poll_total_jiffies) {
+			rq_avg = (rq_avg * jiffy_gap) +
+				(rq_info.rq_avg *
+				 rq_info.rq_poll_total_jiffies);
+			do_div(rq_avg,
+			       rq_info.rq_poll_total_jiffies + jiffy_gap);
+		}
+
+		rq_info.rq_avg = rq_avg;
+		rq_info.rq_poll_total_jiffies += jiffy_gap;
+		rq_info.rq_poll_last_jiffy = jiffies;
+
+		spin_unlock_irqrestore(&rq_lock, flags);
+	}
+
+	/*
+	 * Wakeup user if needed
+	 */
+	jiffy_gap = jiffies - rq_info.def_timer_last_jiffy;
+	if (jiffy_gap >= rq_info.def_timer_jiffies) {
+		rq_info.def_timer_last_jiffy = jiffies;
+		queue_work(rq_wq, &rq_info.def_timer_work);
+	}
+}
+
 static void def_work_fn(struct work_struct *work)
 {
 	int64_t diff;
